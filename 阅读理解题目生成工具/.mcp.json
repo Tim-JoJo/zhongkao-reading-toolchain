@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "vocab-checker": {
+      "command": "python",
+      "args": ["<工具根目录>/Part1-文章改写/vocab-checker/mcp_server.py"],
+      "description": "初中英语阅读命题生词检查器 — 基于2022版课标二级、三级词汇表（2,795词）"
+    },
+    "zhongkao-mcp": {
+      "command": "python",
+      "args": ["<工具根目录>/Part1-文章改写/zhongkao-mcp/mcp_server.py"],
+      "description": "中考阅读文章写作工具链 — 指标检查、题目校验、Word导出"
+    },
+    "mineru-open-mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "mineru_open_mcp.cli"]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "browser-mcp": {
+      "command": "python",
+      "args": ["<本目录>/browser-mcp/mcp_server.py"],
+      "description": "通用浏览器抓取 — 真实Chrome+CDP绕过WAF，兼容任何网页"
+    }
+  }
+}

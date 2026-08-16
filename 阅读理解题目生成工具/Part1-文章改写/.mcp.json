@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "vocab-checker": {
+      "command": "python",
+      "args": ["vocab-checker\\mcp_server.py"]
+    },
+    "zhongkao-mcp": {
+      "command": "python",
+      "args": ["zhongkao-mcp\\mcp_server.py"]
+    },
+    "mineru-open-mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "mineru_open_mcp.cli"]
+    }
+  }
+}
