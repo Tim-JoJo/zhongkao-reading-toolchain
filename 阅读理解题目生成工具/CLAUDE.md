@@ -87,3 +87,19 @@ Part2 生成题目并导出 Word 时，调用 `mcp__zhongkao-mcp__export_docx`�
 - 校验端：`validate_questions` 对 ordering 题检查 `stem` 是否含 `①`、`②` 事件行（不再检查 a./b.）。
 - 导出端：`run_export_docx` 对 ordering 题续行换行用 `<w:br/>`，事件标号 run 的 ascii/hAnsi/eastAsia/cs 全部设为「苹方-简」（仅设 eastAsia 时 ① 仍按 Arial 渲染）；选项里的序列标号同样按苹方-简拆分。其余文字保持微软雅黑/Arial。
 - 参考实现：`Part1-文章改写\zhongkao-mcp\src\exporter.py`（渲染）、`src/validator.py`（校验）。
+
+## 10. 工作流门禁（workflow-gate）
+
+工具链内置一个**跨 agent、跨会话**的工作流状态机（纯 MCP 工具 + 磁盘 JSON 状态文件，不依赖某一家 agent 的专属机制）。`zhongkao-mcp` 的 `check_passage` / `draw_blueprint` / `validate_questions` 会自动把完成情况写入 `<工作目录>/.zhongkao_workflow.json`（或环境变量 `ZHONGKAO_WORKFLOW_FILE` 指定的路径）。`export_docx` 导出前检查状态，缺少硬性步骤时**直接拒绝导出**并返回缺步清单：
+
+- 未调用 `draw_blueprint`（Part2 硬性步骤，未抽蓝图不得导出）
+- `validate_questions` 未通过（`all_pass != true`，校验不过不得导出）
+- 正文无中文注释，但 `check_passage` 检出超纲词（Part1 交付给 Part2 的应是**带注释版**正文）
+
+被拦截时按提示补做对应步骤，**不要绕过拦截强行导出**。状态管理工具：
+
+- `workflow_init(level)` — 开新任务时初始化（清空旧记录 + 记录档位，level 为 standard / extended）
+- `workflow_status()` — 查看已完成 / 待办步骤
+- `workflow_reset()` — 清空状态
+
+开新任务前先 `workflow_init` 或 `workflow_reset`，避免上一个任务的记录干扰本次导出门禁。跨会话/跨 agent 使用同一工作目录时共享同一状态文件。

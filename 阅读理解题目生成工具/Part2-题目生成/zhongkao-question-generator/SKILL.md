@@ -21,6 +21,8 @@ description: Use when generating reading comprehension multiple-choice questions
 
 出题前**必须调用** `mcp__zhongkao-mcp__draw_blueprint` 随机抽取题目蓝图，确保题型覆盖不重复；未抽取蓝图不得进入逐题编写。
 
+开始新任务时，先用 `mcp__zhongkao-mcp__workflow_init(level="...")`（或 `workflow_reset`）清空上一个任务的记录，避免旧状态干扰本次导出门禁；可随时用 `mcp__zhongkao-mcp__workflow_status` 查看各硬性步骤完成情况（工具会自动把 `draw_blueprint` / `validate_questions` / `check_passage` 的结果记录到工作流状态，无需手动登记）。
+
 ## 输入
 
 接受写作完成后的英文文章，并识别：
@@ -70,6 +72,8 @@ mcp__zhongkao-mcp__draw_blueprint()
 ```
 
 返回结果包含五个位置（写作手法/细节、词义或细节、推理判断、排序或推断、主旨）各一道子题型及其模板和约束。题位固定为：Q1 写作手法(30%) 或 细节理解(70%)，Q2 词义猜测(70%) 或 细节理解(30%)，Q3 推理判断（含段落主旨），Q4 排序(80%) 或 推断(20%，复用 Q3 推理池，推断:排序 = 1:4)，Q5 主旨大意。
+
+`draw_blueprint` 会自动记录「蓝图已抽取」及蓝图 codes 到工作流状态；**`export_docx` 在未抽蓝图时会直接拦截导出**，这是门禁兜底，不代表可以跳过本步——仍须按蓝图逐题编写。
 
 #### 段落落点规划（证据随行文顺序分布）
 
@@ -183,6 +187,8 @@ mcp__zhongkao-mcp__validate_questions(
 
 如有 `fail` 或 `review_required` 项，修正后重新校验，直至 `all_pass` 为 true。
 
+`validate_questions` 会自动记录校验结果到工作流状态；**`export_docx` 在 `all_pass` 不为 true 时会拦截导出**，这是门禁兜底，不代表可以跳过本步——仍须校验至 all_pass 后再导出。
+
 若 `mcp__zhongkao-mcp__*` 工具在当前会话不可用（未加载或 server 未上线），可直接调用源码模块绕过 MCP：
 
 ```
@@ -232,6 +238,8 @@ mcp__zhongkao-mcp__export_docx(
 
 `option_count` 只影响选项数量，导出参数不变：3 选项题组时 `options` 每项恰好 A—C（3 个），`answer_key` 对应 3 个字母，`explanations` 与题目一一对应。
 
+**导出拦截（门禁兜底）**：`export_docx` 在缺前置硬性步骤时会拒绝导出并返回缺步清单——典型触发原因：未调用 `draw_blueprint`、`validate_questions` 未到 all_pass、或正文无中文注释（但 `check_passage` 检出超纲词）。被拦截时按提示补做对应步骤（重跑 `draw_blueprint` / `validate_questions`、换带注释正文），**不要绕过拦截强行导出**；可用 `workflow_status` 查看还缺哪几步。
+
 **简版交付**：用户明确要求简版时，跳过 Word 导出，仅在聊天展示题目蓝图和选择题全文。
 
 文档内容：
@@ -278,6 +286,8 @@ mcp__zhongkao-mcp__export_docx(
 - [ ] **⑦ 题目 Word 已导出**（含正文带注释版 + Answer Key + 每题答案解析）
 
 > 说明：仅校验模式（不重出题、不导出）例外，只要求勾选 ④。
+>
+> 以上自查清单由 MCP 门禁自动兜底：`export_docx` 会拦截缺步导出（未抽蓝图 / 校验未 all_pass / 正文缺中文注释）。若导出被拦截，说明有步骤遗漏，按提示补做后再导出。
 
 ## 常见错误
 
