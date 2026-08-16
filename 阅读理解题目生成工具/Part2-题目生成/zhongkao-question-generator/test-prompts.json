@@ -1,0 +1,6 @@
+[
+  {"id": 1, "prompt": "根据这篇已写完的文章生成 5 道阅读理解选择题（文章和指标报告附后）", "expected": "完整执行:Step1读文→Step2配置→Step3 draw_blueprint抽蓝图→Step4逐题写→Step5题组检查→Step6 validate_questions校验(必须出现)→Step7追溯→Step8导出。Q1写作手法/Q2词义或细节/Q3推理/Q4排序/Q5主旨,validate_questions all_pass,导出含答案解析的Word"},
+  {"id": 2, "prompt": "用 3 个选项为这篇文章出 5 道题（未指定档位）", "expected": "不静默默认档位，先向用户确认；3选项格式A-C，5题蓝图覆盖，draw_blueprint+validate_questions 都执行，Answer Key+答案解析"},
+  {"id": 3, "prompt": "校验下面这组题目是否有双答案或文外常识问题（题目附后）", "expected": "仅校验模式:调用validate_questions，指出问题并给出修正，不抽蓝图不导出"},
+  {"id": 4, "prompt": "完整跑一遍工具链:把这篇文章改成中考阅读文章并出题", "expected": "Part1(article-writer全步骤:准入→事实→模块→专名→撰写→Humanizer→check_passage→追溯→报告) + Part2(question-generator全步骤含draw_blueprint+validate_questions)，两个skill的每个必做步骤都不遗漏"}
+]

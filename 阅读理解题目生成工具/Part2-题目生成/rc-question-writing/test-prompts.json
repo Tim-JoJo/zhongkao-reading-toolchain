@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "prompt": "帮我把这篇短文出成教材体阅读题：\n\nSea otters are small marine mammals that live along the coasts of the northern Pacific Ocean. They are famous for their thick fur, which keeps them warm in cold water. Unlike most other sea mammals, sea otters do not have a layer of blubber. Instead, they depend on their fur alone. To survive, an adult sea otter must eat about a quarter of its own body weight in food every day. Sea otters often use rocks to break open the hard shells of clams and crabs. A sea otter will hold a rock on its chest and hit the shell against it until it opens. This makes them one of the few animals that use tools. Sadly, sea otters were hunted heavily in the past for their fur, and their numbers fell sharply. Today, conservation programs have helped some populations recover.",
+    "expected": "5 题教材体配置（2 DETAIL + 1 MAIN IDEA + 1 VOCABULARY + 1 轮换），每题带答案+考点出处+干扰项排除依据"
+  },
+  {
+    "id": 2,
+    "prompt": "帮我把这篇短文出成中考作业体阅读题：\n\nWhen Chris Haas was nine years old, he noticed many of his classmates holding basketballs incorrectly, so they didn't shoot very well during a school basketball practice. He was the son of a basketball coach (教练) and knew a thing or two about the right way to shoot. After trying to show his classmates the right way to hold a ball, he came up with his invention: the hands-on basketball.\n\nThe hands-on basketball is a basketball training tool for kids. It has hands painted on it, showing the correct ways to hold the ball while trying to shoot. With his teachers' and family's encouragement, he went on to patent (获得专利) his idea and he made it. Then he went to several sports companies and asked whether they would be interested in making and selling his invention. None of them was.\n\nChris didn't give up and a year and a half later, luckily, his invention won the attention of a sports company. And it was soon popular in the market. The hands-on basketball is now sold successfully around the world.\n\nBut being a famous person was just one of the new challenges Chris had to face after he sold his invention. Chris promoted (宣传) his invention by travelling around and showing it in cities like New York and Las Vegas. He also had to decide how to use his money wisely. Each year, he gives away much money to children in need. These days, Chris is an active basketball player and writer of the book Shooting for Your Dreams.",
+    "expected": "Q1 写作手法·开篇引入 + Q2-Q3 细节/推断 + Q4 排序·事件顺序 + Q5 主旨/标题，每个新题型按 skill 第 5/6 节规格"
+  },
+  {
+    "id": 3,
+    "prompt": "帮我分析这道题出得怎么样：\n\nWhat is the reading mainly about?\nA. How sea otters use tools to open shells.\nB. Why sea otters need to eat a lot every day.\nC. The life and survival of sea otters.\nD. Where sea otters live along the Pacific coast.",
+    "expected": "题型判定(MAIN IDEA 全篇主旨) + 正确项依据 + 各干扰项排除依据(过窄/过宽) + 质量判断"
+  }
+]

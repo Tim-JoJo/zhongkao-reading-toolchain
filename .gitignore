@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# 浏览器抓取工作数据(爬取过程产物,不入库)
+*.html
+_*.json
+_*.txt
+
+# macOS
+.DS_Store
