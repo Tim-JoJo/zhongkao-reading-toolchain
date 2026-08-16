@@ -50,6 +50,7 @@ python -m spacy download en_core_web_sm     # 生词检查所需的词形还原�
 配置成功后，会话里应出现这些工具：
 
 - `mcp__zhongkao-mcp__check_passage` / `draw_blueprint` / `validate_questions` / `export_docx` / `export_article_docx`
+- `mcp__zhongkao-mcp__workflow_init` / `workflow_status` / `workflow_reset`（工作流状态管理：记录各硬性步骤完成情况，`export_docx` 缺步时自动拦截）
 - `mcp__vocab-checker__check_text` / `check_grade_level` / `check_article`
 
 ### 3. 可选：启用 mineru（PDF/网页解析）
@@ -87,6 +88,7 @@ python -c "import sys; sys.path.insert(0, 'Part1-文章改写/vocab-checker'); i
 - `draw_blueprint` 与 `validate_questions` 是出题硬性步骤，不得跳过。
 - 报告/题目 Word 的输出目录**必须先问用户**，不得静默默认。
 - 正文中文注释在导出前最后一步才加入，指标检查用无注释正文。
+- **导出门禁自动兜底**：`export_docx` 在缺前置步骤（未抽蓝图 / 校验未 all_pass / 正文无中文注释）时会拒绝导出并提示缺步，agent 按提示补做后再导出，不要绕过。开新任务先用 `workflow_init` 或 `workflow_reset` 清空状态。
 
 ## 常见问题
 

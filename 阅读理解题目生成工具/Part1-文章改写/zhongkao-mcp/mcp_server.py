@@ -2,11 +2,14 @@
 中考阅读文章写作 MCP Server (Part 1)
 ===================================
 提供工具：
-  1. check_passage          — 正文指标全检
-  2. validate_questions     — 题目质量校验
+  1. check_passage          — 正文指标全检(自动记录)
+  2. validate_questions     — 题目质量校验(自动记录)
   3. export_article_docx    — 导出文章 Word 文档
-  4. export_docx            — 导出文章 + 题目 Word 文档
-  5. draw_blueprint         — 随机抽取题目蓝图
+  4. export_docx            — 导出文章 + 题目 Word 文档(缺前置步骤时拦截)
+  5. draw_blueprint         — 随机抽取题目蓝图(自动记录)
+  6. workflow_init          — 开新任务时初始化状态
+  7. workflow_status        — 查看各步骤完成情况
+  8. workflow_reset         — 清空状态
 
 文章写作由 Claude 执行（遵循 SKILL.md），本 MCP 提供自动化支撑。
 """
@@ -35,6 +38,18 @@ from src.exporter import (
     run_export_article_docx,
 )
 from src.blueprint import run_draw_blueprint
+from src.workflow import (
+    cjk_count,
+    export_annotation_warning,
+    export_gate_errors,
+    init_state,
+    record_blueprint,
+    record_check_passage,
+    record_docx_exported,
+    record_validate,
+    reset_state,
+    status_summary,
+)
 
 # ═══════════════════════════════════════════════════
 # Tool 1: check_passage — 指标全检
@@ -99,7 +114,7 @@ def check_passage(
     if grade != 9:
         return {"error": f"年级参数无效: {grade}。本工具只面向九年级，grade 必须为 9"}
 
-    return run_check_passage(
+    result = run_check_passage(
         text=text,
         level=level,
         grade=grade,
@@ -107,6 +122,10 @@ def check_passage(
         level_thresholds=LEVEL_THRESHOLDS[level],
         grade_limits=GRADE_LIMITS[grade],
     )
+    # 自动记录指标结果到工作流状态（供 export_docx 门禁用）
+    if "error" not in result:
+        record_check_passage(result)
+    return result
 
 
 # ═══════════════════════════════════════════════════
@@ -133,7 +152,11 @@ def validate_questions(
             "all_pass": bool
         }
     """
-    return run_validate_questions(questions, option_count)
+    result = run_validate_questions(questions, option_count)
+    # 自动记录校验结果到工作流状态（供 export_docx 门禁用）
+    if "error" not in result:
+        record_validate(result)
+    return result
 
 
 # ═══════════════════════════════════════════════════
@@ -192,10 +215,16 @@ def export_docx(
     Returns:
         str: 成功时返回保存路径，失败时返回错误信息
     """
+    # ── 工作流门禁：缺前置硬性步骤则拦截导出 ──
+    errors = export_gate_errors(body)
+    if errors:
+        return "❌ 已拦截导出，缺少前置硬性步骤：\n" + "\n".join(f"  - {e}" for e in errors)
+    warning = export_annotation_warning(body)
+
     if output_path is None:
         safe_name = re.sub(r'[<>:"/\\|?*]', '-', title)[:80]
         output_path = str(Path(DEFAULT_ARTICLE_DIR) / f"{safe_name}.docx")
-    return run_export_docx(
+    result = run_export_docx(
         title=title,
         body=body,
         questions=questions,
@@ -203,6 +232,12 @@ def export_docx(
         output_path=output_path,
         explanations=explanations,
     )
+    # 导出成功后自动记录（annotated_body = 正文是否含中文注释）
+    if result.startswith("文档已保存"):
+        record_docx_exported(annotated=bool(cjk_count(body) > 0))
+    if warning:
+        result = f"{result}\n{warning}"
+    return result
 
 
 # ═══════════════════════════════════════════════════
@@ -233,7 +268,56 @@ def draw_blueprint(seed: int | None = None) -> dict[str, Any]:
             "codes": ["WT-06", "V-02", "I-01", "O-03", "M-03"],
         }
     """
-    return run_draw_blueprint(seed=seed)
+    result = run_draw_blueprint(seed=seed)
+    # 自动记录蓝图已抽取（export_docx 门禁的硬性前置步骤）
+    if "error" not in result:
+        record_blueprint(result)
+    return result
+
+
+# ═══════════════════════════════════════════════════
+# 辅助工具:工作流状态机
+# （记录各硬性步骤完成情况;export_docx 在缺步时拦截导出。
+#   纯 MCP 工具 + JSON 状态文件,兼容任何 MCP agent。）
+# ═══════════════════════════════════════════════════
+
+@mcp.tool()
+def workflow_init(level: str) -> dict[str, Any]:
+    """开新任务时初始化工作流状态(清空旧状态,记录档位)。
+
+    任何 MCP agent 在开始一篇文章的改写/出题前,建议先调用本工具
+    reset 状态,避免上一个任务的记录干扰本次导出门禁。
+
+    Args:
+        level: 档位 — "standard"(标准档)或 "extended"(拓展档)
+
+    Returns:
+        dict: 初始化后的完整状态,失败(档位非法)时返回 {"error": ...}
+    """
+    state = init_state(level)
+    if state is None:
+        return {"error": f"未知档位: {level},可选 standard / extended"}
+    return {"ok": True, "state": state}
+
+
+@mcp.tool()
+def workflow_status() -> dict[str, Any]:
+    """查看当前工作流状态:已完成步骤 / 待办步骤 / 原始状态。
+
+    Returns:
+        dict: {"level", "completed": [已完成的步骤], "missing": [待办的步骤], "state": 原始状态}
+    """
+    return status_summary()
+
+
+@mcp.tool()
+def workflow_reset() -> dict[str, Any]:
+    """清空工作流状态(开新任务 / 重新开始一篇时调用)。
+
+    Returns:
+        dict: 清空后的默认状态
+    """
+    return {"ok": True, "state": reset_state()}
 
 
 # ═══════════════════════════════════════════════════
