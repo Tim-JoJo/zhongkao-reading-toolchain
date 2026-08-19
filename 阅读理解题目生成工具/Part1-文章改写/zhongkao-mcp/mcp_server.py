@@ -245,17 +245,18 @@ def export_docx(
 # ═══════════════════════════════════════════════════
 
 @mcp.tool()
-def draw_blueprint(seed: int | None = None) -> dict[str, Any]:
+def draw_blueprint(seed: int | None = None, article_has_title: bool = False) -> dict[str, Any]:
     """随机抽取五题蓝图——从五个位置各随机选一个子题型。
 
     Q1(写作手法 30% 或 细节理解 70%) 从 WT-01~WT-06 / D-01~D-03·D-05~D-06 池中加权抽取，
     Q2(词义 70% 或 细节 30%) 从 V-01~V-04 / D-01~D-03·D-05~D-06 池中加权抽取，
-    Q3(推理判断) 从 I-01~I-08(不含 I-05) 池中抽，
+    Q3(推理判断) 从 I-01~I-08(不含 I-05) 池中抽；抽中 I-08 段落主旨时按 main_idea/M-03 标注（标签 MAIN IDEA），
     Q4(排序 80% 或 推断 20%) 从 O-01~O-03 / I-01~I-08(不含 I-05) 池中加权抽取，
-    Q5(主旨) 从 M-01~M-05 池中抽。
+    Q5(主旨) 从 M-01~M-05 池中抽；article_has_title=true 时改从 I 类推断池抽（不出 best title）。
 
     Args:
         seed: 可选随机种子（调试用，通常不传）
+        article_has_title: 文章是否已有标题。为 True 时 Q5 不出「最佳标题」(M-01)，改为推断题（I 类）
 
     Returns:
         dict: {
@@ -268,7 +269,7 @@ def draw_blueprint(seed: int | None = None) -> dict[str, Any]:
             "codes": ["WT-06", "V-02", "I-01", "O-03", "M-03"],
         }
     """
-    result = run_draw_blueprint(seed=seed)
+    result = run_draw_blueprint(seed=seed, article_has_title=article_has_title)
     # 自动记录蓝图已抽取（export_docx 门禁的硬性前置步骤）
     if "error" not in result:
         record_blueprint(result)

@@ -55,22 +55,22 @@ BLUEPRINT_POOL = {
     "vocabulary_or_detail": {
         "V-01": {
             "name": "词义猜测-定义线索",
-            "template": 'The word "X" means...',
+            "template": 'The word "X" means ______?',
             "constraint": "原文 ≤ 2 句内有 means / refers to / that is 或同位语/定语从句解释；取材：长难词(未加中文注释者)70% + 短语 30%",
         },
         "V-02": {
             "name": "词义猜测-对比线索",
-            "template": '"X" probably means...',
+            "template": '"X" probably means ______?',
             "constraint": "原文含 but / however / while / instead of / unlike 标记；取材：长难词(未加中文注释者)70% + 短语 30%",
         },
         "V-03": {
             "name": "词义猜测-因果线索",
-            "template": '"X" probably means...',
+            "template": '"X" probably means ______?',
             "constraint": "原文含 because / so / lead to / result in 因果链；取材：长难词(未加中文注释者)70% + 短语 30%",
         },
         "V-04": {
             "name": "词义猜测-构词法",
-            "template": '"X" means...',
+            "template": '"X" means ______?',
             "constraint": "超纲词根 + 课标词缀；取材：长难词(未加中文注释者)70% + 短语 30%",
         },
         "D-01": {
@@ -234,7 +234,7 @@ Q1_DETAIL_POOL = {
 }
 
 
-def run_draw_blueprint(seed: int | None = None) -> dict[str, Any]:
+def run_draw_blueprint(seed: int | None = None, article_has_title: bool = False) -> dict[str, Any]:
     """从五个位置的题型池中各随机抽取一个子题型。
 
     Q1 按加权抽取：写作手法 30% / 细节理解 70%。
@@ -243,6 +243,8 @@ def run_draw_blueprint(seed: int | None = None) -> dict[str, Any]:
 
     Args:
         seed: 可选随机种子，用于复现（调试用）
+        article_has_title: 文章是否已有标题。为 True 时 Q5 不抽「最佳标题」(M-01)，
+            改为推断题（I 类），避免标题类文章再出 best title 题。
 
     Returns:
         dict: {
@@ -294,6 +296,21 @@ def run_draw_blueprint(seed: int | None = None) -> dict[str, Any]:
 
         code = rng.choice(list(pool.keys()))
         info = pool[code]
+
+        if position == 3 and code == "I-08":
+            # Q3 抽中「段落主旨」时按 MAIN IDEA 标注：段落主旨题与 M-03 段落大意同质，
+            # type=main_idea 使导出标签为 MAIN IDEA（而非 INFERENCE）
+            type_label = "main_idea"
+            code = "M-03"
+            function = "段落主旨"
+        elif position == 5 and article_has_title:
+            # 文章已有标题时，Q5 不出「最佳标题」(M-01) 题型，改为全文推断题（I 类，
+            # 排除 I-08 段落主旨——那属段内主旨，不适合全文位置）
+            pool = {k: v for k, v in BLUEPRINT_POOL["inference"].items() if k != "I-08"}
+            type_label = "inference"
+            function = "推理判断"
+            code = rng.choice(list(pool.keys()))
+            info = pool[code]
 
         blueprint.append({
             "position": position,

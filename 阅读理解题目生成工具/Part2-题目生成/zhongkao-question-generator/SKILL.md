@@ -68,10 +68,15 @@ description: Use when generating reading comprehension multiple-choice questions
 使用 `mcp__zhongkao-mcp__draw_blueprint` 随机抽取五题蓝图：
 
 ```
-mcp__zhongkao-mcp__draw_blueprint()
+mcp__zhongkao-mcp__draw_blueprint()   # 文章无标题（或已有标题但调用方忽略该规则）
+mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题：Q5 自动改出推断题，不出 best title
 ```
 
 返回结果包含五个位置（写作手法/细节、词义或细节、推理判断、排序或推断、主旨）各一道子题型及其模板和约束。题位固定为：Q1 写作手法(30%) 或 细节理解(70%)，Q2 词义猜测(70%) 或 细节理解(30%)，Q3 推理判断（含段落主旨），Q4 排序(80%) 或 推断(20%，复用 Q3 推理池，推断:排序 = 1:4)，Q5 主旨大意。
+
+**两条硬性标注/选型规则（出题时必须遵守）：**
+- **段落主旨题标 MAIN IDEA**：Q3 若出段落主旨题（`What is paragraph X mainly about?`），`type` 必须用 `main_idea`（导出标签 MAIN IDEA，对应 M-03 段落大意），不得用 `inference`（否则标签显示 INFERENCE）。蓝图抽取到 `I-08` 时已自动转 `main_idea`/`M-03`。
+- **文章已有标题时 Q5 不出最佳标题**：文章自带标题时，Q5 不得出「最佳标题」（M-01）题型，改为推断题（I 类）。调用 `draw_blueprint` 时传 `article_has_title=true` 即可自动规避；手动编写蓝图时同样遵守。
 
 `draw_blueprint` 会自动记录「蓝图已抽取」及蓝图 codes 到工作流状态；**`export_docx` 在未抽蓝图时会直接拦截导出**，这是门禁兜底，不代表可以跳过本步——仍须按蓝图逐题编写。
 
@@ -83,9 +88,9 @@ mcp__zhongkao-mcp__draw_blueprint()
 |------|------|---------|
 | Q1 | 写作手法(30%) 或 细节理解(70%) | 固定第 1 段 |
 | Q2 | 词义猜测(70%) 或 细节理解(30%) | 前中部段落 |
-| Q3 | 推理判断（含段落主旨） | 中间段落（不限前中后，中间段落即可） |
+| Q3 | 推理判断（含段落主旨；段落主旨题标 **MAIN IDEA**，`type=main_idea`） | 中间段落（不限前中后，中间段落即可） |
 | Q4 | 排序(80%) 或 推断(20%) | 排序→全文（跨段时间线）；推断→按推断题落点（跨段/中间段落） |
-| Q5 | 主旨大意 | 全文（覆盖全文主线，不绑单段） |
+| Q5 | 主旨大意（文章已有标题时改出推断题 I 类，不出 best title） | 全文（覆盖全文主线，不绑单段） |
 
 段数与题目数对应：
 
@@ -112,6 +117,7 @@ mcp__zhongkao-mcp__draw_blueprint()
 - 目标词优先选**长难词**（70%），从文章**未加中文注释**的那部分生词中选取；已注释词不重复作考点。
 - 其余 30% 选**不太好理解的短语**（如 `give up`、`a good deal of` 之类语义需要推敲的搭配）。
 - 猜词题不与 Part 1 的中文注释重叠——被注释词已是"给答案"状态，失去猜测价值。
+- **猜词题题干格式**：统一以空线 `______` + 问号结尾（如 `The word "spray" in paragraph 3 probably means ______?`），不得以 `...` 结尾；validator 有咨询性检查。
 
 #### 推断题范围规则（I-01 隐含信息）
 

@@ -76,6 +76,10 @@ def run_validate_questions(
             # 排序题事件用 ①~④ 标号，一行一个事件
             if not (re.search(r"(?m)^\s*①", stem) and re.search(r"(?m)^\s*②", stem)):
                 issues.append(f"题{qid}：ordering 题 stem 应先用 ①/②/③/④ 列出各事件（每事件一行），再给选项序列")
+        if q.get("type") == "vocabulary_or_detail" and str(q.get("code", "")).startswith("V"):
+            # 猜词题题干应含空线并以问号结尾（如 ... means ______?），避免 "means..." 缺空线的格式
+            if "______" not in stem or not stem.endswith("?"):
+                issues.append(f"题{qid}：猜词题 stem 应含 '______' 并以问号结尾（如 The word \"X\" probably means ______?），当前为 '{stem}'")
 
     # ── 检查 2: 答案唯一性 ──
     answer_ok = True
