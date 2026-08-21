@@ -1,10 +1,7 @@
 ---
 name: rc-question-writing
 description: |
-  初中英语阅读理解命题方法论。基于 Reading Explorer Level 1 两册(第三版+第二版)233 道 Reading Comprehension 题 + 3 篇中考英语作业题(新增写作手法/排序两种题型的归类分析,
-  提炼 4 大题型(DETAIL/INFERENCE/MAIN IDEA/VOCABULARY,MAIN IDEA 含目的/提及意图,VOCABULARY 含代词指代)+ 2 个新题型(写作手法·开篇引入固定 Q1 / 排序·事件顺序固定 Q4)的
-  出题逻辑 + 子模式 + 干扰项设计 + 类型分界。
-  用途:给定文章按教材体出题,或审校/改写已有题目。触发词:「出题」「命题」「设计阅读题」「出个阅读理解题」「题干/干扰项怎么设计」「这道题出的怎么样」。
+  Use when the user wants to generate 初中英语 (junior-high English) reading comprehension questions for a given article in textbook style (教材体), or to analyze / review / rewrite existing questions. 方法论归纳自 Reading Explorer Level 1 两册(第三版+第二版) 233 题 + 3 篇中考英语作业题,提炼 4 大题型(DETAIL/INFERENCE/MAIN IDEA/VOCABULARY,MAIN IDEA 含目的/提及意图,VOCABULARY 含代词指代)+ 2 新题型(写作手法·开篇引入固定 Q1 / 排序·事件顺序固定 Q4)的出题逻辑、子模式、干扰项设计与类型分界。触发词:「出题」「命题」「设计阅读题」「出个阅读理解题」「题干/干扰项怎么设计」「这道题出的怎么样」。
 ---
 
 # 阅读理解命题 · 出题逻辑操作系统
@@ -32,6 +29,7 @@ description: |
 | 避坑/常见出题错误 | → 直接回答 | `design-logic.md`(反模式) |
 | 写作手法题怎么出 | → 场景A(固定 Q1) | `question-type-library.md` 第 5 节 |
 | 排序题怎么出 | → 场景A(固定 Q4) | `question-type-library.md` 第 6 节 |
+| 意图含糊 / 无法归入以上任何类型 | → 先澄清：问用户是要出题、分析还是审校，以及是否附带文章原文 | 仍不确定时，按「出题?还是分析/审校?文章贴一下」两步问清后再路由 |
 
 **加载原则**:
 - 只加载当前场景需要的 reference,不要一次全读
@@ -156,6 +154,7 @@ Step 3: 改写
 | 10 | 素材太短(1-2 句) | 减到 2-3 题,优先 DETAIL + INFERENCE | 明确告知该素材撑不起 5 题 |
 | 11 | 素材没有清晰时间标记/序列词 | 不出排序题(Q4 换 INFERENCE/MAIN IDEA) | 排序题最忌靠逻辑猜,宁可换题 |
 | 12 | 首段无明确开篇手法 | 不出写作手法题(Q1 换 DETAIL) | 写作手法必须能指认首段实际手法 |
+| 13 | 用户没提供文章原文就要出题 | 说明需原文才能保证考点对应,先出「题型框架」级示例 | 请用户贴原文后再正式出题 |
 
 ---
 
