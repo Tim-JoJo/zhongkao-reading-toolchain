@@ -312,6 +312,17 @@ mcp__zhongkao-mcp__export_docx(
 | 题干比正文还难 | 题干生词反成额外门槛，考查错位 | 题干语言应低于正文一个难度级别 |
 | 四道题都是细节定位 | 题型覆盖不达标（缺推理/主旨），违反交付门槛「覆盖五种能力」 | 用蓝图保证至少覆盖五种能力 |
 
+## 失败模式与 Fallback
+
+| # | 触发信号 | 第一选择 | 备用 |
+|---|---------|---------|------|
+| 1 | `mcp__zhongkao-mcp__*` 会话中不可用 | 先查工具包根 `.mcp.json` 路径是否指向真实代码；路径正确则重启会话加载 | python 直调 `Part1-文章改写/zhongkao-mcp/src/` 的 `run_draw_blueprint` / `run_validate_questions` / `run_export_docx` 绕过 MCP |
+| 2 | 蓝图自动抽到的题型与文章特征不符（无写作手法却抽 WT、无清晰时间标记却抽 O 类） | 手动调整题型并说明理由（见第 3 步段落落点规划） | 重跑 `draw_blueprint` 重新抽取 |
+| 3 | `validate_questions` 返回 fail / review_required | 按检查项逐条修正后重跑，直到 all_pass 为 true | 用 `workflow_status` 定位具体未过的步骤 |
+| 4 | `export_docx` 拦截导出（未抽蓝图 / 校验未 all_pass / 正文缺中文注释） | 按缺步清单补做对应步骤，不绕过拦截 | 查 `workflow_status` 确认还缺哪一步 |
+| 5 | 仅校验模式误入完整流程（重出题/导出） | 回到第 6 步「仅校验已有题目」轻量流程，只输出校验结论 | 需要导出时由用户另行提出 |
+| 6 | 承接的 Part1 正文 > 350 词，或 Part1 未交付 / 未 all_pass | 回 Part1 压缩或补齐后再出题 | 用「执行前核对」清单逐项确认交接完整 |
+
 ## 前置依赖
 
 本 Skill 假设文章已经过 `zhongkao-article-writer` 写作完成并完成指标检查。如果文章尚未写作，请先使用 `zhongkao-article-writer` Skill。
