@@ -1,12 +1,7 @@
 ---
 name: reading-explorer-writing
 description: |
-  Reading Explorer 教材体写作方法论。基于 National Geographic Reading Explorer 1(第三版)全册 24 篇 + Reading Explorer 2(第三版)全册 24 篇
-  的逐篇六维分析 + 原文语料证据校验,
-  提炼 8 大行文逻辑模块 + 15 个领域共识模型 + 20 条决策启发式 + 20 条反模式。
-  用途:给定素材(原文/新闻/外刊文章/主题),诊断行文逻辑、套用模块骨架、产出教材体阅读文章或改编稿。
-  当用户提到「行文逻辑」「写作手法」「怎么改写这篇文章」「外刊改编」「教材体写作」「阅读文章怎么组织」「按这几种写法写」时使用。
-  即使用户只是说「帮我看看这篇怎么写的」「用哪种结构写这篇」「把这篇文章改成阅读题体裁」「行文分析」也应触发。
+  Use when the user wants to write or adapt a reading passage in Reading Explorer 教材体 style, or to analyze / review the writing logic of an existing article. 给定素材(原文/新闻/外刊文章/主题),诊断行文逻辑、套用模块骨架、产出教材体阅读文章或改编稿,或分析一篇文章的写法。方法论归纳自 National Geographic Reading Explorer 1(第三版)全册 24 篇 + Reading Explorer 2(第三版)全册 24 篇的逐篇六维分析 + 原文语料证据校验,提炼 8 大行文逻辑模块 + 15 个领域共识模型 + 20 条决策启发式 + 20 条反模式。触发词:「行文逻辑」「写作手法」「怎么改写这篇文章」「外刊改编」「教材体写作」「阅读文章怎么组织」「按这几种写法写」;即使用户只是说「帮我看看这篇怎么写的」「用哪种结构写这篇」「把这篇文章改成阅读题体裁」「行文分析」也应触发。
 ---
 
 # Reading Explorer 教材体写作 · 行文逻辑操作系统
