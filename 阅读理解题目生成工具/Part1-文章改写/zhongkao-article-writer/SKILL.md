@@ -291,6 +291,17 @@ mcp__zhongkao-mcp__check_passage(text="正文", level="standard", grade=9, prope
 | 指标表与 JSON 数字不一致 | 以 MCP 工具返回的 metrics 为唯一数值源，交付前逐项比对 |
 | 交付给 Part2 题目 Word / 写入报告 Word 时误用无注释正文（指标检查版），导致中文注释缺失 | 指标检查用无注释正文；交付前最后一步按第 5 步规则加入中文注释，再传带注释正文给 `export_docx` 并写入报告 Word |
 
+## 失败模式与 Fallback
+
+| # | 触发信号 | 第一选择 | 备用 |
+|---|---------|---------|------|
+| 1 | `mcp__vocab-checker__*` / `mcp__zhongkao-mcp__*` 会话中不可用 | 先检查工具包根 `.mcp.json` 路径是否指向真实代码；路径正确则重启会话加载 | 直接用 python 调 `Part1-文章改写/zhongkao-mcp/src/checker.py`（`check_text`/`check_passage`）绕过 MCP，本包 src 即唯一代码源 |
+| 2 | `reading-explorer-writing` 的 `module-library.md` / `mental-models-heuristics.md` 缺失或不可读 | 第 3 步退化为兜底模式（总分总/起承转合），第 5 步按兜底结构撰写 | 第 6 步改用本包 `references/adaptation-methods.md` 的 Humanizer 清单，报告「写作说明」注明"外部模块库不可用" |
+| 3 | `check_passage` 覆盖率 / 平均句长 / P90 超带宽 | 逐项修改并重跑，通常 2–3 轮（第 1 轮 `check_text` 验词汇，第 2 轮全指标，第 3 轮核查地道性） | 标「需复核」并说明理由；不为达标损害事实 |
+| 4 | `word_count` > 350 | 压缩或拆分为两段后重跑 `check_passage`，直到 `word_count` 为 pass | 硬失败：不得交付，回到第 5 步写作阶段压缩 |
+| 5 | 导出报告 Word 时 python-docx 不可用 | 在聊天展示报告内容并标注「报告 Word 未导出」 | 修复环境后重导出 |
+| 6 | Part2 `export_docx` 拦截「正文未包含中文注释（检出 N 个超纲词）」 | 回到第 9 步，按第 5 步规则补中文注释（超纲词唯一词元的 50%–60%，加词族首次出现的词） | 重新交付带注释正文；不靠绕过拦截代替补注释 |
+
 ## 后续步骤
 
 文章写作完成后，如需生成阅读理解选择题，请使用 `zhongkao-question-generator` Skill，传入正文（**带中文注释版**）、档位、题数和选项数即可。
