@@ -104,6 +104,19 @@ d["matches"].append(match)
 
 加试题篮需要登录，用 `browser-mcp__open_in_browser`（或直接调 Chrome）打开页面，让用户手动加。
 
+## 失败模式与 Fallback 表
+
+| # | 触发信号 | 第一选择 | 备用 |
+|---|---------|---------|------|
+| 1 | `browser-mcp` 未注册 / CDP 连接失败 | 退化为本地脚本 `../browser-mcp/_cdp_batch.py` / `_cdp_fetch.py` | 手动用 Chrome 打开列表页另存 HTML，再用 Read 读 |
+| 2 | Aliyun WAF「已阻断」拦截（requests / 无头 Chrome） | 改用真实 Chrome + `--remote-allow-origins=*` + websocket 抓取 | 换一个目标节点/URL 重试；仍失败则把候选页 URL 交给用户手动打开 |
+| 3 | 目标网站没有主题树（非组卷网） | 跳过知识树定位，直接用站点搜索词抓列表页 | 问用户要该站的分类/标签 URL |
+| 4 | 该节点下候选文章过少，或全部 < 阈值 | 检查相邻（上下级）节点，换更贴近「匹配维度」的节点 | 列出 60-65% 的接近项让用户决定是否放宽阈值 |
+| 5 | 抓取结果中文乱码 | 中文分析结果一律写文件再用 Read 读（UTF-8 正确） | 用 python 显式 `encoding='utf-8'` 重新解码后写文件 |
+| 6 | 批量抓取脚本报错（tasks.txt 格式错 / 超时） | 检查 `printf "%s\t%s"` 的 tab 分隔与 URL 有效性，单页重试 | 拆成小批次逐页抓，逐页确认输出非空 |
+| 7 | 维度判断与用户分歧 | 先听用户直觉改维度（用户常更准） | 把两种维度的候选差异列出来让用户选 |
+| 8 | 匹配结果写入 JSON 后需要撤回 | 按 id 移除旧记录再 append（见步骤 6 的幂等写法） | 手动编辑 JSON，确认 id 无重复 |
+
 ## 已固化的经验
 
 - **CDP 才是唯一绕过 Aliyun WAF 的方法**：requests 和无头 Chrome 都被"已阻断"拦截，真实 Chrome + `--remote-allow-origins=*` + websocket 才行
