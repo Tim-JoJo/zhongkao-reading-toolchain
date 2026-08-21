@@ -56,7 +56,7 @@ def _get_question_type_label(q: dict) -> str:
     t = q.get("type", "")
     code = q.get("code", "")
     if t == "writing_technique":
-        return "WRITING TECHNIQUE"
+        return "CRAFT"
     if t == "detail":
         return "DETAIL"
     if t == "vocabulary_or_detail":
@@ -147,7 +147,7 @@ def run_export_docx(
                 tag_para.paragraph_format.line_spacing = 1.0
                 run = tag_para.add_run(type_label)
                 _set_run_font(run, size=8, bold=True)
-                run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+                run.font.color.rgb = RGBColor(0x80, 0x80, 0x80)
 
             p = doc.add_paragraph()
             p.paragraph_format.space_before = Pt(12)
