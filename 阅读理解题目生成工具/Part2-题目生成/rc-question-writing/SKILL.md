@@ -1,10 +1,7 @@
 ---
 name: rc-question-writing
 description: |
-  初中英语阅读理解命题方法论。基于 Reading Explorer Level 1 两册(第三版+第二版)233 道 Reading Comprehension 题 + 3 篇中考英语作业题(新增写作手法/排序两种题型的归类分析,
-  提炼 4 大题型(DETAIL/INFERENCE/MAIN IDEA/VOCABULARY,MAIN IDEA 含目的/提及意图,VOCABULARY 含代词指代)+ 2 个新题型(写作手法·开篇引入固定 Q1 / 排序·事件顺序固定 Q4)的
-  出题逻辑 + 子模式 + 干扰项设计 + 类型分界。
-  用途:给定文章按教材体出题,或审校/改写已有题目。触发词:「出题」「命题」「设计阅读题」「出个阅读理解题」「题干/干扰项怎么设计」「这道题出的怎么样」。
+  Use when the user wants to generate 初中英语 (junior-high English) reading comprehension questions for a given article in textbook style (教材体), or to analyze / review / rewrite existing questions. 方法论归纳自 Reading Explorer Level 1 两册(第三版+第二版) 233 题 + 3 篇中考英语作业题,提炼 4 大题型(DETAIL/INFERENCE/MAIN IDEA/VOCABULARY,MAIN IDEA 含目的/提及意图,VOCABULARY 含代词指代)+ 2 新题型(写作手法·开篇引入固定 Q1 / 排序·事件顺序固定 Q4)的出题逻辑、子模式、干扰项设计与类型分界。触发词:「出题」「命题」「设计阅读题」「出个阅读理解题」「题干/干扰项怎么设计」「这道题出的怎么样」。
 ---
 
 # 阅读理解命题 · 出题逻辑操作系统
