@@ -33,7 +33,9 @@ description: Use when generating reading comprehension multiple-choice questions
 - `option_count`，默认 4，可设 3
 - 文章的指标报告（如有，便于了解可考点和超纲词）
 
-会话中未指定档位时，**先询问用户选择档位**（`standard | extended`），不得静默默认（遵循项目 CLAUDE.md 第 5 节）。本工具只面向九年级，年级固定为 9，不提供其他年级选项。正文缺失时停止，说明原因。
+🔴 CHECKPOINT：会话中未指定档位时，**先询问用户选择档位**（`standard | extended`），不得静默默认（遵循项目 CLAUDE.md 第 5 节）。本工具只面向九年级，年级固定为 9，不提供其他年级选项。
+
+🔴 STOP：正文缺失时**停止**，说明原因，等用户补齐正文后再继续。
 
 ## 工作流
 
@@ -63,7 +65,7 @@ description: Use when generating reading comprehension multiple-choice questions
 
 ### 3. 抽取题目蓝图（必须执行）
 
-**硬性步骤**：必须调用 `mcp__zhongkao-mcp__draw_blueprint` 随机抽取五题蓝图；此步不可跳过，未抽取蓝图不得进入第 4 步逐题编写。
+🔴 CHECKPOINT：**硬性步骤**——必须调用 `mcp__zhongkao-mcp__draw_blueprint` 随机抽取五题蓝图；此步不可跳过，未抽取蓝图不得进入第 4 步逐题编写。
 
 使用 `mcp__zhongkao-mcp__draw_blueprint` 随机抽取五题蓝图：
 
@@ -173,7 +175,7 @@ mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题
 
 ### 6. 自动化校验（硬性步骤）
 
-**硬性门槛**：必须调用 `mcp__zhongkao-mcp__validate_questions` 校验；`all_pass` 为 true 前不得进入第 7 步双向追溯，更不得导出 Word。
+🔴 CHECKPOINT：**硬性门槛**——必须调用 `mcp__zhongkao-mcp__validate_questions` 校验；`all_pass` 为 true 前不得进入第 7 步双向追溯，更不得导出 Word。
 
 使用 `mcp__zhongkao-mcp__validate_questions` 自动校验题目质量：
 
@@ -229,7 +231,7 @@ python -c "from src.exporter import run_export_docx; ..."
 
 ### 8. 生成题目 Word 文档
 
-**输出目录（硬性步骤）：导出前必须确认输出路径。** 若用户会话中**未明确指定**题目 Word 的保存目录，**必须先询问用户**「题目 Word 保存到哪个目录？」，待用户给出路径后再导出；不得静默默认任何默认目录。用户指定的路径优先。该目录应与 Part1 报告 Word 的目录分别确认。
+🔴 CHECKPOINT：**输出目录（硬性步骤）——导出前必须确认输出路径。** 若用户会话中**未明确指定**题目 Word 的保存目录，**必须先询问用户**「题目 Word 保存到哪个目录？」，待用户给出路径后再导出；不得静默默认任何默认目录。用户指定的路径优先。该目录应与 Part1 报告 Word 的目录分别确认。
 
 推荐使用 `mcp__zhongkao-mcp__export_docx` 工具一键导出（自动处理样式和排版）：
 
@@ -281,7 +283,7 @@ mcp__zhongkao-mcp__export_docx(
 - 前后题目信息泄露（前题答案暗示后题答案）
 - **正文全文词数 > 350**：Part1 交付的正文须 ≤350 词（Part1 的 `check_passage` 已硬性校验 word_count）；若承接的正文超 350 词，回 Part1 压缩，不得带超限正文出题导出
 
-### 交付前最终自查清单（逐项勾选，缺一不可）
+### 交付前最终自查清单（🔴 CHECKPOINT：逐项勾选，缺一不可，全部确认前不导出）
 
 导出 Word 前，逐项确认以下步骤**全部执行过**；任一未勾选即补做，不得直接交付：
 
