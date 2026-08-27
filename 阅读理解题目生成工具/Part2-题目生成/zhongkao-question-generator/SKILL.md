@@ -78,8 +78,8 @@ mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题
 返回结果包含五个位置（写作手法/细节、词义或细节、推理判断、排序或推断、主旨）各一道子题型及其模板和约束。题位固定为：Q1 写作手法(30%) 或 细节理解(70%)，Q2 词义猜测(70%) 或 细节理解(30%)，Q3 推理判断（含段落主旨；推理池内段落主旨 I-08 权重 5%，其余 6 类均分 95%），Q4 排序(80%) 或 推断(20%，复用 Q3 推理池，推断:排序 = 1:4)，Q5 主旨大意。
 
 **四条硬性标注/选型规则（出题时必须遵守）：**
-- **段落主旨题标 MAIN IDEA**：Q3 若出段落主旨题（`What is paragraph X mainly about?`），`type` 必须用 `main_idea`（导出标签 MAIN IDEA，对应 M-03 段落大意），不得用 `inference`（否则标签显示 INFERENCE）。蓝图抽取到 `I-08` 时已自动转 `main_idea`/`M-03`。
-- **Q4 抽中 I-08 时手动转换**：Q4 推断路径（20% 概率）复用推理池，此时 `I-08` 可被抽中且**不会**自动转换（自动转换只在 Q3 生效）。实测源码确认此边界存在；抽到时照 Q3 规则处理：`type` 改 `main_idea`、`code` 改 `M-03`，题干按段落主旨题撰写，并在交付说明里注明「Q4 蓝图 I-08 已手动转 M-03」。
+- **段落主旨题标 MAIN IDEA**：Q3 若出段落主旨题（`What is paragraph X mainly about?`），`type` 必须用 `main_idea`（导出标签 MAIN IDEA，对应 M-03 段落大意），不得用 `inference`（否则标签显示 INFERENCE）。Q3 蓝图抽取到 `I-08` 时已自动转 `main_idea`/`M-03`（仅 Q3 自动；Q4 见下条手动转换）。
+- **Q4 抽中 I-08 时手动转换**：Q4 推断路径（20% 概率）复用推理池，此时 `I-08` 可被抽中且**不会**自动转换（自动转换只在 Q3 生效）。实测源码确认此边界存在；抽到时照 Q3 规则处理：`type` 改 `main_idea`、`code` 改 `M-03`，题干按段落主旨题撰写，并在交付说明里注明「Q4 蓝图 I-08 已手动转 M-03」。⚠️ **双 I-08 角点**：若 Q3、Q4 同时抽中段落主旨（概率约 0.05%），两条规则都执行转换后推理题将消失、`type_coverage` 报 `review_required`——此时重跑 `draw_blueprint` 重抽 Q4 即可，不得强行保留两道段落主旨题。
 - **文章已有标题时 Q5 不出最佳标题**：文章自带标题时，Q5 不得出「最佳标题」（M-01）题型，改为推断题（I 类）。调用 `draw_blueprint` 时传 `article_has_title=true` 即可自动规避；手动编写蓝图时同样遵守。
 - **写作手法题标签用 CRAFT**：写作手法题（`type=writing_technique`）导出时的题型标签为 **CRAFT**（不再用 WRITING TECHNIQUE）。题型标签统一右对齐、灰色（导出器 `run_export_docx` 已默认实现）。
 
