@@ -77,7 +77,7 @@ Step 4: 构造选项
 
 Step 5: 自检交付
   → 交付时附"每题:题型 + 考点出处 + 正确项依据 + 各干扰项排除依据"
-  → 【强制校验】交付前调用 `mcp__zhongkao-mcp__validate_questions`(questions 每项含 id/stem/options/answer/type,option_count=选项数)校验选项格式、答案唯一性、题型覆盖;有 fail/review_required 则修正后重跑,直至 all_pass。MCP 不可用时退化为人工自检:逐题复核①答案字母在选项范围内②无两个可答项③**答案字母指向的选项文本 = 写定的正确项**(字母与正确项内容错位=出题事故,必须重写选项或改字母;MCP 只查字母范围、查不出内容错位)
+  → 【强制校验】交付前调用 `mcp__zhongkao-mcp__validate_questions`(questions 每项含 id/stem/options/answer/type,option_count=选项数)校验选项格式、答案唯一性、题型覆盖;有 fail/review_required 则修正后重跑,直至 all_pass。**type 字段必须用 validator 认的小写命名**,不能直接用本 Skill 的展示名:**DETAIL→`detail`、INFERENCE→`inference`、MAIN IDEA→`main_idea`、VOCABULARY(含指代类 REFERENCE)→`vocabulary_or_detail`、写作手法→`writing_technique`、排序→`ordering`**(大写/展示名会触发 type_coverage 报"题目类型可能缺失";`detail` 也可用,validator 视其为 vocabulary_or_detail 的同类别名)。MCP 不可用时退化为人工自检:逐题复核①答案字母在选项范围内②无两个可答项③**答案字母指向的选项文本 = 写定的正确项**(字母与正确项内容错位=出题事故,必须重写选项或改字母;MCP 只查字母范围、查不出内容错位)
 ```
 
 ### 场景B: 分析一道题怎么出的
