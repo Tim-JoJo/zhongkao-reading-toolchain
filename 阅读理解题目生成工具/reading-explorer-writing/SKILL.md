@@ -189,6 +189,8 @@ Step 3: 改写
 
 ## Reference索引
 
+> 🔴 **跨 Skill 契约**：`references/module-library.md` 与 `references/mental-models-heuristics.md` 被 `zhongkao-article-writer` Skill 硬依赖（其 SKILL.md 第 24-26 行按 `../../reading-explorer-writing/references/` 相对路径读取，第 34 行有专门的缺失降级路径）。**这两个文件改名/移动/删除前必须同步更新 `zhongkao-article-writer/SKILL.md` 的引用路径**，否则该 Skill 会静默退化为兜底结构（总分总/起承转合），损失 8 大模块能力。
+
 | 文件 | 内容 | 长度 |
 |------|------|------|
 | **操作层(按需加载)** | | |
