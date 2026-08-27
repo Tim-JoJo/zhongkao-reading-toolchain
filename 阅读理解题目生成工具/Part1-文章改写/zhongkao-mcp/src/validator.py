@@ -77,9 +77,11 @@ def run_validate_questions(
             if not (re.search(r"(?m)^\s*①", stem) and re.search(r"(?m)^\s*②", stem)):
                 issues.append(f"题{qid}：ordering 题 stem 应先用 ①/②/③/④ 列出各事件（每事件一行），再给选项序列")
         if q.get("type") == "vocabulary_or_detail" and str(q.get("code", "")).startswith("V"):
-            # 猜词题题干应含空线并以问号结尾（如 ... means ______?），避免 "means..." 缺空线的格式
-            if "______" not in stem or not stem.endswith("?"):
-                issues.append(f"题{qid}：猜词题 stem 应含 '______' 并以问号结尾（如 The word \"X\" probably means ______?），当前为 '{stem}'")
+            # 猜词题题干：真题格式 `What does the underlined word "X" in Paragraph N (probably) mean?`
+            # 或兼容旧空线格式 `The word "X" ... means ______?`；须以问号结尾
+            zhen_ti = re.match(r'^What do(es)? the underlined (?:word|words).*\bmean\b.*\?$', stem, re.IGNORECASE)
+            if not (zhen_ti or ("______" in stem and stem.endswith("?"))):
+                issues.append(f"题{qid}：猜词题 stem 应为真题格式 'What does the underlined word \"X\" in Paragraph N (probably) mean?' 或以 '______?' 空线结尾，当前为 '{stem}'")
 
     # ── 检查 2: 答案唯一性 ──
     answer_ok = True

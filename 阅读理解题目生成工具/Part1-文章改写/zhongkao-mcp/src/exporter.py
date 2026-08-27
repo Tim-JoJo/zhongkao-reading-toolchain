@@ -85,7 +85,8 @@ def run_export_docx(
 ) -> str:
     """将正文和选择题导出为 .docx 文档。
 
-    explanations: 每题答案解析（与题目一一对应），渲染在 Answer Key 之后。
+    explanations: 答案解析，渲染在 Answer Key 之后。第 1 条为导语（全文总结，
+        不加编号、独立成段、后接空行），其余逐题详解与题目一一对应（导出器从 1 开始编号）。
     """
     if Document is None:
         return "错误：需要安装 python-docx 库 (pip install python-docx)"
@@ -218,14 +219,27 @@ def run_export_docx(
             r.font.name = "Arial"
             r._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
 
-        # ── 答案解析（每题一条） ──
+        # ── 答案解析（导语 + 逐题详解） ──
         if explanations:
             doc.add_paragraph()
             p = doc.add_paragraph()
             run = p.add_run("答案解析:")
             _set_run_font(run, size=12, bold=True)
             p.paragraph_format.line_spacing = 1.5
-            for i, expl in enumerate(explanations):
+
+            # explanations 第 1 条若为导语（len == 题目数 + 1），独立成段、不加编号、后接空行；
+            # 其余逐题详解从 1 开始编号，与题目一一对应。
+            lead = ""
+            body = list(explanations)
+            if len(body) == len(answer_key) + 1:
+                lead = body.pop(0)
+            if lead:
+                p = doc.add_paragraph()
+                run = p.add_run(lead.strip())
+                _set_run_font(run, size=10, italic=True)
+                p.paragraph_format.line_spacing = 1.5
+                doc.add_paragraph()  # 空行分隔导语与逐题详解
+            for i, expl in enumerate(body):
                 p = doc.add_paragraph()
                 # 解析文本可能已自带编号（如 "1. 解析：…"），剥掉避免与自动编号重复成 "1. 1."
                 expl_text = re.sub(r"^\s*\d+\s*[.．、]\s*", "", expl.strip())

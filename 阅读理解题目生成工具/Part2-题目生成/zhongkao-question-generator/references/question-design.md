@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|
 | 1 | 写作手法或细节 | 开篇引入方式(30%) 或 首段细节理解(70%)（提问/场景/故事/举例/数字/对比 / 时间/原因/方式/特征） | 首段首句或首段整体 | 可结合首段末句铺垫 | 固定第 1 段 |
 | 2 | 词义或细节 | 词义猜测（定义/对比/因果/构词，70%）或细节理解（时间/原因/方式/特征，30%） | 同段或相邻句 | 可跨句或比较两处 | 第 2 段（须 > Q1） |
-| 3 | 推理判断 | 隐含信息、人物动机、后续发展、隐含因果、段落主旨（段落主旨题按 M-03 标 **MAIN IDEA**，不标 INFERENCE） | 同段或相邻句 | 可跨段 | 第 3 段（须 > Q2） |
+| 3 | 推理判断 | 隐含信息、人物动机、后续发展、隐含因果、段落主旨（段落主旨题按 M-03 标 **MAIN IDEA**，不标 INFERENCE；推理池内段落主旨 I-08 权重 5%，其余 6 类均分 95%） | 同段或相邻句 | 可跨段 | 第 3 段（须 > Q2） |
 | 4 | 排序或推断 | 事件/故事/时代顺序(80%) 或 推断(20%，复用 Q3 推理池) | 每个事件有明确时间标记或序列词 | 可跨段时间线 | 排序→全文（跨段素材）；推断→第 4 段或靠后（须 > Q3） |
 | 5 | 主旨 | 最佳标题、全文主旨、写作目的；**文章已有标题时不出最佳标题（M-01），改出推断题（I 类）** | 覆盖全文主线 | 同时覆盖主张和限制 | 末段或全文（单段须 > Q4） |
 
@@ -42,6 +42,7 @@
 | WT-04 | 举例引入 | How does the writer lead in the topic? | 首段给出具体例子；正确项 By giving an example |
 | WT-05 | 列数字引入 | How does the writer begin the article? | 首段列出数据/统计；正确项 By listing numbers |
 | WT-06 | 对比引入 | How does the writer lead in the topic? | 首段对照两个事物；正确项 By comparing two different ideas |
+| WT-07 | 结束手法（补充） | How does the writer end the text? | 末段有呼应/展望/总结等收束手法；正确项 By + V-ing。**补充模板，不入蓝图自动抽取池（蓝图仍抽 WT-01~06），手动出题可用** |
 
 ### 排序题（O 类）
 
@@ -65,16 +66,16 @@
 
 ### 词义猜测题（V 类）
 
-取材规则：目标词优先选**长难词**（70%）；其余 30% 选**不太好理解的短语**。**允许选文中已加中文注释的词**：把该词的注释从正文去掉即可作考点（去掉注释后该词不再"给答案"），去注释的操作不参与生词覆盖率计算。**选词必须通读上下文**：目标词须能靠语境线索（定义/对比/因果/身份提示等）推断词义，**不得**选纯构词法或纯并列列举中的专业名词（如 `cybersecurity`）。
+取材规则：**目标词必须为单个单词，不得选短语/词组**（如 `stand against each other`、`give up` 等均不可作考点），优先选**长难词**。**允许选文中已加中文注释的词**：把该词的注释从正文去掉即可作考点（去掉注释后该词不再"给答案"），去注释的操作不参与生词覆盖率计算。**选词必须通读上下文**：目标词须能靠语境线索（定义/对比/因果/身份提示等）推断词义，**不得**选纯构词法或纯并列列举中的专业名词（如 `cybersecurity`）。**划线词必须与原文词形逐字一致**：下划线须覆盖原文实际出现的完整单词（如原文 `anchoring` 就划 `anchoring`），不得只截取单词的一部分（如划 `anchoring` 的前半截 `anchor`），也不得把派生词换成原形词；原文词在句首大写时（如 `Primary`）按原文划线即可。
 
 | 编号 | 考点 | 命题模板 | 硬约束 |
 |------|------|---------|--------|
-| V-01 | 定义/解释线索 | The word “X” means ______? | 原文 ≤ 2 句内有 means / refers to / that is / in other words 或同位语/定语从句解释 |
-| V-02 | 对比/转折线索 | “X” probably means ______? | 原文含 but / however / while / instead of / unlike 标记 |
-| V-03 | 因果关系线索 | “X” probably means ______? | 原文含 because / so / lead to / result in 因果链 |
-| V-04 | 构词法线索 | “X” means ______? | 超纲词根 + 课标词缀 |
+| V-01 | 定义/解释线索 | What does the underlined word "X" (probably) mean? | 原文 ≤ 2 句内有 means / refers to / that is / in other words 或同位语/定语从句解释 |
+| V-02 | 对比/转折线索 | What does the underlined word "X" probably mean? | 原文含 but / however / while / instead of / unlike 标记 |
+| V-03 | 因果关系线索 | What does the underlined word "X" probably mean? | 原文含 because / so / lead to / result in 因果链 |
+| V-04 | 构词法线索 | What does the underlined word "X" mean? | 超纲词根 + 课标词缀 |
 
-> **猜词题（V 类）题干格式**：统一以空线 `______` + 问号结尾（如 `The word "spray" in paragraph 3 probably means ______?`），不得以 `...` 结尾。**题干必须写清目标词所在自然段**（如 `The word "founder" in paragraph 3 probably means ______?`）；目标词须在正文对应位置加**单下划线**标注（目标词拆成独立 run 设下划线时须保持与前后单词间的空格，不得粘连，如 `texturewas` 应为 `texture was`）。validator 对此有咨询性检查。
+> **猜词题（V 类）题干格式**：统一句式 `What does the underlined word "X" (probably) mean?`，题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加**单下划线**即定位，不得以 `...` 结尾。**划线词必须与原文词形逐字一致**（下划线覆盖原文实际出现的完整单词，如原文 `anchoring` 不得只划前半截 `anchor`；句首大写词按原文划线即可；拆成独立 run 设下划线时须保持与前后单词间的空格，不得粘连，如 `texturewas` 应为 `texture was`）。validator 对此有咨询性检查（同时接受真题句式与旧空线格式）。
 
 ### 推理判断题（I 类）
 
@@ -86,17 +87,21 @@
 | I-04 | 后续发展 | What will probably happen next? | 原文末段有伏笔/暗示 |
 | I-05 | 写作目的/读者 | Who is it written for? / Purpose? | 依据语言难度、内容深度推断 |
 | I-06 | 隐含因果 | What led to...? | 需综合多处细节推断 |
-| I-07 | 信息合理性 | Which statement is probably true? | 3 个干扰项含事实/逻辑错误 |
+| I-07 | 信息合理性 | Which statement is (probably) TRUE? / Which of the following is TRUE according to the passage? | 3 个干扰项含事实/逻辑错误 |
+| I-09 | 人物特征评价（补充） | Which of the following best describes X? | 选项为同词性形容词（Loving and caring./Funny./Brave.）；由全文行为/语言推断 |
+| I-10 | 读后启示（补充） | What can be learned from the story? | 由故事主旨升华出启示，选项常为谚语句 |
+
+> 注：I-08 为段落主旨（蓝图内固定，转 M-03/MAIN IDEA，见「默认五题蓝图」）。I-09（人物特征评价）、I-10（读后启示）为真题对齐的**补充模板**，均属「推理判断」类别：I-09 由行为/语言推断人物特征、I-10 由主旨升华推断启示，分类与 I-01~I-08 同属 I 类。**两者不入蓝图自动抽取池**（蓝图仍抽 I-01~I-08，分布不变），手动出题时按题型需要选用。
 
 ### 主旨大意题（M 类）
 
 | 编号 | 考点 | 命题模板 | 硬约束 |
 |------|------|---------|--------|
-| M-01 | 最佳标题 | What is the best title? | 覆盖全文核心，范围不过宽/过窄 |
-| M-02 | 全文主旨 | The passage is mainly about... | 概括 ≥ 3 个段落核心信息 |
-| M-03 | 段落大意 | What is paragraph X mainly about? | 对应主题句或核心事件 |
-| M-04 | 写作目的 | What is the writer's purpose? | 限于 to inform/describe/persuade/entertain/warn/advise |
-| M-05 | 文章来源 | Where is it probably from? | 匹配体裁特征 |
+| M-01 | 最佳标题 | `Which would be the best title for the text?` / `What is the best title for the passage?` / `What can/could be a (proper) title for the text?`（真题 4 变体） | 覆盖全文核心，范围不过宽/过窄；选项为名词短语或疑问句标题 |
+| M-02 | 全文主旨 | `What is the main idea of the passage?` | 概括 ≥ 3 个段落核心信息；与段落主旨（M-03）句式区分 |
+| M-03 | 段落大意 | `What is Paragraph X mainly about?` / `What does Paragraph X mainly talk about/focus on?` / `What does the last paragraph focus on?`（真题两套构式） | 对应主题句或核心事件 |
+| M-04 | 写作目的 | `What is the writer's purpose in writing the text?` / `What might be the writer's purpose of writing the passage?` | 限于 to inform/describe/persuade/entertain/warn/advise；选项常为不定式短语 |
+| M-05 | 文章来源 | `Where can you read the text?` / `Where does the passage probably come from?` / `In which section of a magazine can we read the text?` / `In which part of a newspaper can you find the text?` | 匹配体裁特征；选项为同类别名词（diary/newspaper/website/storybook 等） |
 
 **标题干扰项错误类型：** 范围过宽 / 范围过窄 / 偏离主题 / 无中生有
 
@@ -119,11 +124,54 @@
 
 | 编号 | 考点 | 命题模板 | 硬约束 |
 |------|------|---------|--------|
-| S-01 | 指代关系 | What does “it / this / they / that” refer to? | ≤ 2 句范围内指代明确唯一 |
+| S-01 | 指代关系 | What does the underlined word “X” refer to? | ≤ 2 句范围内指代明确唯一 |
 | S-02 | 衔接词 | What word can be put in the blank? | 考查 but / however / therefore / because / for example / besides / instead / first / then / finally |
 | S-03 | 句子复位 | Where does the sentence best fit? | 复位后语义和指代连贯 |
-| S-04 | 段落功能 | What is the function of paragraph X? | 限于 introduce / example / contrast / conclusion / background |
+| S-04 | 段落功能 | What is the function of the first/last paragraph? / Why does the writer list the number of X?（真题例证/数据作用变体） | 限于 introduce / example / contrast / conclusion / background；例证/数据题须指出该例证/数据支持的具体观点 |
 | S-05 | 信息组织方式 | How does the writer organize the text? | 限于 time order / problem-solution / cause-effect / comparison-contrast |
+
+## 题干模板库与解析方法（真题对齐映射 · 2026 全国中考）
+
+> 语料基准：2026 年 15 省市中考试卷阅读部分 + 14 份精品解析解析版。
+> **用法：抽到某类题型时，题干按下表"真题题干模板"整句复用（填变量：划线词/段号/名词），不得自由改写；解析按下表"解析方法"撰写（详见 `explanation-writing.md`）。**
+
+### 题型 → 真题题干模板 → 解析方法
+
+| 题型 | 真题题干模板（抽中即套用） | 解析方法 |
+|------|--------------------------|---------|
+| 词义猜测 V-01~04 | `What does the underlined word "X" (probably) mean?`（题干不写段落编号） | 语境 + 同义替换：引划线词所在句/前后句，说明语境线索，推出词义并与选项近义对应 |
+| 指代 S-01 | `What does the underlined word "X" refer to?` | 引含指代词的原文句，说明其先行词 |
+| 细节理解 D-01~06 | `What/Why/How long/How many/When/Where/Who...?`（不写段位，行文顺序由题序暗含） | 最短：`第X段"原文引句"，可知/说明…`（1 引 1 结） |
+| 段落主旨 M-03 | `What is the last/first paragraph mainly about?`（**仅首末段可用**；中间段不出段落主旨，改出全文主旨或作者观点） | 对应主题句或核心事件，概括该段 |
+| 全文主旨 M-02 | `What is the main idea of the passage?` | 多段综合：概括 ≥3 段核心信息 |
+| 最佳标题 M-01 | `Which would be the best title for the text?` / `What is the best title for the passage?` / `What can/could be a (proper) title for the text?` | 多段引文锁定核心 + 选项原句回扣 |
+| 写作手法 WT-01~07 | `How does the writer start/begin/end/lead in the text?`（By + V-ing 选项区分具体手法） | 引首段（或相关段）实际手法，与选项 By + V-ing 对应 |
+| 写作目的 M-04 | `What is the writer's purpose in writing the text?` / `What is the writer's main purpose in writing this passage?` | 通读全文概括目的，选项常为不定式短语 |
+| 出处 M-05 | `Where can you read the text?` / `Where does the passage probably come from?` | 按内容特征/体裁判断（不引文） |
+| 推断 I-01~07 | `What can we infer/learn from the passage?` / `What can we learn from the story?` / `Which statement is TRUE?` / `Which of the following would the writer most probably agree with?` | 引证 + 推断链：先引原文再补推理，多用「因此/由此可推断/推测」 |
+| 人物特征评价 I-09（补充） | `Which of the following can best describe X?` | 由全文行为/语言推断特征，与选项形容词对照 |
+| 读后启示 I-10（补充） | `What can we learn from X's story?` / `What can we learn from the story?` | 由故事主旨升华启示，选项常为谚语句 |
+| 段落功能/例证作用 S-04（补充） | `What is the function of the first/last paragraph?` / `Why does the writer list the number of X?` | 指出该例证/数据/转折支持的具体观点 |
+| 排序 O-01~03 | `Which is the correct order of the story?` / `Put the following events in the correct time order.` / `What is the right order of the following facts?` | 按"由'引文'可知 + 起初/然后/最后"逐环节推进，回扣选项序列 |
+
+> 注：补充模板（WT-07、I-09、I-10、S-04 例证变体）属真题对齐的手动选用项，**不入蓝图自动抽取池**（蓝图仍按 WT-01~06 / D / V / I-01~08 / O / M 分布抽取），分布与类型不变。
+
+### 段位定位表达（解析引证用；题干不写编号段落）
+
+**题干**：不出现 `paragraph 2` 这类带编号的具体段落（行文顺序由题序暗含，段落落点见「默认五题蓝图」）；仅首末段可用 `the first paragraph` / `the last paragraph`，其余用全文定位（`the passage` / `the story`）。
+
+**解析引证**：保留段位定位，用固定表达（`第X段` / `第X段第X句` / `末句` / `通读全文`）。
+
+| 表达 | 用法 |
+|------|------|
+| 第X段 | 解析引证（猜词/指代/细节） |
+| 第X段第X句 / 末句 | 解析引证（句级定位） |
+| 通读全文 / 根据全文 | 主旨/写作目的/标题题解析 |
+| 图片/表格/作者署名 | 非文本证据定位 |
+
+### 元认知题型覆盖（每套必考）
+
+真题每套阅读必含：猜词 1、最佳标题 1、段落/全文主旨、出处或写作手法/目的。五题蓝图 Q2（词义）、Q3（推理含段落主旨）、Q5（主旨/标题）已覆盖三类；若题组未含「出处/写作手法/目的」中的任一，检查是否漏考元认知维度（可在 Q4 推断或 Q1 写作手法中补足，不强制新增题数）。
 
 ## 每题生成顺序
 
@@ -169,14 +217,17 @@
 
 ## 解析合同
 
-每题都输出：
+**解析正文按真题对齐的「导语 + 逐题详解」结构撰写（详见 `explanation-writing.md`），每题详解必须包含：**
+
+- 正确答案
+- 证据原句（定位短语 + 逐字引原文）
+- 推理步骤（推理动词层级：说明/可知/因此/推知/最可能出自）
+- 每个干扰项的错误点（按"少而准"原则：多数只讲正确项即间接排除；易混题显式点出可验证否定）
+
+每题同时输出内部元数据（不进入导出正文）：
 
 - 考查类型
 - 对应课标能力
-- 正确答案
-- 证据原句或句号
-- 推理步骤
-- 每个干扰项的具体错误
 - 难度：低 / 中 / 高，并说明来自词汇、跨度、关系还是抽象层级
 
 ## 证据账本与出题的关系
@@ -187,7 +238,7 @@
 |---------|--------------|---------|
 | 事实 | D 类细节题、V 类词义猜测 | 跨句整合替代单句照抄 |
 | 研究结果 | I 类推断、V 类词义猜测 | 注意保留研究数量限定（a study ≠ studies） |
-| 专家观点 | P 类观点态度、M 类主旨 | 区分直接引语和间接引语，不得混淆归属 |
+| 专家观点 | P 类观点态度、I 类推断 | 区分直接引语和间接引语，不得混淆归属；**作者态度题（题干含 the writer）禁止以被引述者观点为答案依据**——作者客观报道 ≠ 作者认同（引语只代表被引述者的态度）；若考被引述者观点，题干须点名（`According to X, ...`） |
 | 作者判断 | P 类观点态度、I 类推断 | 语气强度不能因改写而改变（may ≠ will） |
 
 ## 单题质量检查
@@ -203,6 +254,9 @@
 - [ ] 正确答案在原文唯一确定（无第二个可答项）
 - [ ] 选项无 `all / never / always / only / none / every` 等显眼绝对词泄露答案
 - [ ] 干扰项不是完全荒谬项（不读文也能排除的选项）
+- [ ] 干扰项与全文主旨无**方向性矛盾**（不与核心事实相反）
+- [ ] 干扰项与题干**同语义场**（不漂移到相关但不同的话题）
+- [ ] 态度题锚点核对：题干含 `the writer` 时，答案引证必须来自作者本人表述，而非文中引语（said/argues 引导的被引述者观点）
 
 ## 自动化校验工具
 
@@ -264,9 +318,10 @@
 
 | 规则 | 标准 |
 |------|------|
-| 题干长度 | ≤ 20 词（不含引文） |
+| 题干长度 | ≤ 20 词（不含引文）；真题普遍 6-9 词 |
 | 语言难度 | 低于阅读文本一个级别 |
-| 段落指向 | 必须明确（According to paragraph X / In paragraph X） |
+| 段落指向 | 题干不写编号段落（`paragraph 2` 等，行文顺序由题序暗含）；仅首末段可用 `the first paragraph` / `the last paragraph`，全文用 `the passage` / `the story`。段位定位只用于解析引证 |
+| 题干语言 | 一律英文，Wh-/How- 疑问词开头（What/Why/How/Which/When/Where/Who）；引导语可用中文 |
 | 否定式题干 | ≤ 2 题 / 题组 |
 | 否定词标注 | NOT / EXCEPT 必须全大写或加粗 |
 | 题干禁止 | "According to the passage" 范围过大——全文定位题除外 |
@@ -277,7 +332,8 @@
 |------|------|
 | 数量 | 4 个（多数省份）/ 3 个（山西、江西、广西等） |
 | 长度均衡 | 最长选项 ≤ 最短 × 2（词数） |
-| 结构一致 | 同为名词短语 / 动词短语 / 从句 / 完整句 |
+| 结构一致 | 同为名词短语 / 动词短语 / 从句 / 完整句；语法严格平行 |
+| 形式偏好 | 真题以短词/名词短语/介词短语/动词短语为主，极少完整长句；写作手法题选项统一 `By + V-ing`；猜词题选项为同词性近义词/释义短语；主旨升华题可为谚语句 |
 | 词汇控制 | 100% 课标词 |
 | 干扰项来源 | 必须基于文中词汇或概念 |
 | 重复词控制 | 共享词语写在题干中 |

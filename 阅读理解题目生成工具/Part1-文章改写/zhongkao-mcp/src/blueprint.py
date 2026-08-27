@@ -13,7 +13,7 @@ from typing import Any
 # 题位结构（中考作业体 5 题）：
 #   Q1 写作手法(30%) or 细节理解(70%)（加权抽取）
 #   Q2 词义猜测(70%) or 细节理解(30%)（加权抽取，词义:细节 = 7:3）
-#   Q3 推理判断（固定，含段落主旨）
+#   Q3 推理判断（固定，含段落主旨；池内 I-08 段落主旨权重 5%）
 #   Q4 排序·事件顺序 80% / 推断题 20%（加权抽取，推断:排序 = 1:4）
 #   Q5 主旨大意（固定）
 
@@ -55,23 +55,23 @@ BLUEPRINT_POOL = {
     "vocabulary_or_detail": {
         "V-01": {
             "name": "词义猜测-定义线索",
-            "template": 'The word "X" means ______?',
-            "constraint": "原文 ≤ 2 句内有 means / refers to / that is 或同位语/定语从句解释；取材：长难词(未加中文注释者)70% + 短语 30%",
+            "template": 'What does the underlined word "X" mean?',
+            "constraint": "原文 ≤ 2 句内有 means / refers to / that is 或同位语/定语从句解释；取材：长难词(未加中文注释者)70% + 短语 30%；题干不写段落编号",
         },
         "V-02": {
             "name": "词义猜测-对比线索",
-            "template": '"X" probably means ______?',
-            "constraint": "原文含 but / however / while / instead of / unlike 标记；取材：长难词(未加中文注释者)70% + 短语 30%",
+            "template": 'What does the underlined word "X" probably mean?',
+            "constraint": "原文含 but / however / while / instead of / unlike 标记；取材：长难词(未加中文注释者)70% + 短语 30%；题干不写段落编号",
         },
         "V-03": {
             "name": "词义猜测-因果线索",
-            "template": '"X" probably means ______?',
-            "constraint": "原文含 because / so / lead to / result in 因果链；取材：长难词(未加中文注释者)70% + 短语 30%",
+            "template": 'What does the underlined word "X" probably mean?',
+            "constraint": "原文含 because / so / lead to / result in 因果链；取材：长难词(未加中文注释者)70% + 短语 30%；题干不写段落编号",
         },
         "V-04": {
             "name": "词义猜测-构词法",
-            "template": '"X" means ______?',
-            "constraint": "超纲词根 + 课标词缀；取材：长难词(未加中文注释者)70% + 短语 30%",
+            "template": 'What does the underlined word "X" mean?',
+            "constraint": "超纲词根 + 课标词缀；取材：长难词(未加中文注释者)70% + 短语 30%；题干不写段落编号",
         },
         "D-01": {
             "name": "细节-时间/地点/人物/数字",
@@ -133,8 +133,8 @@ BLUEPRINT_POOL = {
         },
         "I-08": {
             "name": "段落主旨",
-            "template": "What is paragraph X mainly about?",
-            "constraint": "对应主题句或核心事件；参考 Q5 的 M-03 段落大意，用于 Q3 推理位",
+            "template": "What is the last/first paragraph mainly about?",
+            "constraint": "对应主题句或核心事件；仅首末段可用（题干不写编号段落），中间段改出全文主旨；参考 Q5 的 M-03 段落大意，用于 Q3 推理位",
         },
     },
     # ── Q4 · 排序·事件顺序 ──
@@ -159,7 +159,7 @@ BLUEPRINT_POOL = {
     "main_idea": {
         "M-01": {
             "name": "最佳标题",
-            "template": "What is the best title?",
+            "template": "Which would be the best title for the text?",
             "constraint": "覆盖全文核心，范围不过宽/过窄",
         },
         "M-02": {
@@ -169,8 +169,8 @@ BLUEPRINT_POOL = {
         },
         "M-03": {
             "name": "段落大意",
-            "template": "What is paragraph X mainly about?",
-            "constraint": "对应主题句或核心事件",
+            "template": "What is the last/first paragraph mainly about?",
+            "constraint": "对应主题句或核心事件；仅首末段可用（题干不写编号段落），中间段改出全文主旨",
         },
         "M-04": {
             "name": "写作目的",
@@ -203,6 +203,11 @@ Q2_VOCAB_WEIGHT = 0.7  # 词义猜测占比，剩余 30% 为细节理解
 
 # ── Q4 加权抽取：推断题 20% / 排序 80%（推断:排序 = 1:4）──
 Q4_INFERENCE_WEIGHT = 0.2
+
+# ── 推理判断池权重：I-08 段落主旨 5%，其余 6 类均分 95% ──
+# I 池共 7 类（I-01/02/03/04/06/07/08，无 I-05）；Q3 抽中 I-08 时转 M-03/MAIN IDEA。
+INFERENCE_WEIGHTS = {f"I-{n:02d}": 0.95 / 6 for n in (1, 2, 3, 4, 6, 7)}
+INFERENCE_WEIGHTS["I-08"] = 0.05
 
 # ── Q1 · 细节理解池（70% 权重，证据定位首段）──
 Q1_DETAIL_POOL = {
@@ -240,6 +245,7 @@ def run_draw_blueprint(seed: int | None = None, article_has_title: bool = False)
     Q1 按加权抽取：写作手法 30% / 细节理解 70%。
     Q2 按加权抽取：词义猜测 70% / 细节理解 30%（词义:细节 = 7:3）。
     Q4 按加权抽取：推断题 20% / 排序 80%（推断:排序 = 1:4）。
+    Q3/Q4 的推理池按 INFERENCE_WEIGHTS 加权：I-08 段落主旨 5%，其余 6 类均分 95%。
 
     Args:
         seed: 可选随机种子，用于复现（调试用）
@@ -294,7 +300,11 @@ def run_draw_blueprint(seed: int | None = None, article_has_title: bool = False)
             pool = BLUEPRINT_POOL[pool_key]
             type_label = pool_key
 
-        code = rng.choice(list(pool.keys()))
+        if "I-08" in pool:
+            # 推理池按 INFERENCE_WEIGHTS 加权（I-08 段落主旨 5%，其余 6 类均分 95%）
+            code = rng.choices(list(pool.keys()), weights=[INFERENCE_WEIGHTS[c] for c in pool], k=1)[0]
+        else:
+            code = rng.choice(list(pool.keys()))
         info = pool[code]
 
         if position == 3 and code == "I-08":
