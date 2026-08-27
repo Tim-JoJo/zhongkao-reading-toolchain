@@ -29,7 +29,7 @@ mcp = FastMCP(
 import re
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
-from src.checker import run_check_passage
+from src.checker import run_check_passage, run_check_original_quotes
 from src.validator import run_validate_questions
 from src.exporter import (
     DEFAULT_ARTICLE_DIR,
@@ -126,6 +126,21 @@ def check_passage(
     if "error" not in result:
         record_check_passage(result)
     return result
+
+
+# ═══════════════════════════════════════════════════
+# Tool 1b: check_original_quotes — 原文原句检测(硬性)
+# ═══════════════════════════════════════════════════
+
+@mcp.tool()
+def check_original_quotes(text: str, source_text: str, similarity_threshold: float = 0.95) -> dict[str, Any]:
+    """检测改编文本是否引用了原文原句。硬性规则:改编正文不得逐字引用原文任何句子。
+
+    逐句比对改编正文与原文:归一化后完全一致、或字符相似度 >= similarity_threshold(默认 0.95)
+    即判定命中;任何命中返回 all_pass=false,该句必须改写(换结构、换措辞)后重新检测。
+    Part1 第 9 步导出前必须通过本检测。
+    """
+    return run_check_original_quotes(text, source_text, similarity_threshold)
 
 
 # ═══════════════════════════════════════════════════

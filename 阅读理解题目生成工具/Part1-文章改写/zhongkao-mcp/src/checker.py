@@ -298,3 +298,49 @@ def _format_oov_details(vocab_result: dict) -> list[dict]:
             by_word[w]["sentences"].append(sent)
     # 按频次降序
     return sorted(by_word.values(), key=lambda x: -x["frequency"])
+
+
+def _norm_sentence(s: str) -> str:
+    """归一化:去空白、标点、非字母数字,转小写(用于原句比对)。"""
+    return re.sub(r"[\s\W_]+", "", s).lower()
+
+
+def _char_similarity(a: str, b: str) -> float:
+    """字符级相似度(difflib SequenceMatcher ratio)。"""
+    from difflib import SequenceMatcher
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def run_check_original_quotes(text: str, source_text: str, similarity_threshold: float = 0.95) -> dict[str, Any]:
+    """检测改编文本是否引用了原文原句(硬性规则:不可引用任何原文原句)。
+
+    逐句比对:改编句与任一原文句归一化后完全一致、或字符相似度 >= similarity_threshold、
+    或改编句完整包含原文句(反之亦然),即判定命中。返回 all_pass 与命中详情;任何命中必须改写该句后重新检测。
+    """
+    text_sents = _split_sentences(text)
+    source_sents = _split_sentences(source_text)
+    source_pairs = [(s, _norm_sentence(s)) for s in source_sents if _norm_sentence(s)]
+    hits: list[dict] = []
+    for s in text_sents:
+        n = _norm_sentence(s)
+        if not n:
+            continue
+        for src, sn in source_pairs:
+            if n == sn:
+                hits.append({"sentence": s, "matched_source": src, "similarity": 1.0})
+                break
+            # 包含关系:改编句完整包含原文句(或反之)——即使追加了成分也算引用
+            if sn in n or n in sn:
+                sim = _char_similarity(n, sn)
+                hits.append({"sentence": s, "matched_source": src, "similarity": round(sim, 3), "containment": True})
+                break
+            sim = _char_similarity(n, sn)
+            if sim >= similarity_threshold:
+                hits.append({"sentence": s, "matched_source": src, "similarity": round(sim, 3)})
+                break
+    return {
+        "all_pass": len(hits) == 0,
+        "hit_count": len(hits),
+        "hits": hits,
+        "threshold": similarity_threshold,
+    }
