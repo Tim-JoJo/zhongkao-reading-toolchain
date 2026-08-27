@@ -1,6 +1,6 @@
 ---
 name: zhongkao-article-writer
-description: Use when the user wants to turn an English news, magazine, science, narrative, or current-affairs article into a Chinese middle-school entrance-exam (中考) reading passage. Extracts facts from the source, matches a writing logic module, and produces an original article with controlled vocabulary, quantified long-sentence variety, and up to 5 retained original sentences. Triggers on: 中考阅读, 外刊写作, 文章写作, 重写文章, 原创改写, 行文逻辑, 写一篇中考阅读, 把这篇文章改成中考阅读, standard, extended. Follow with zhongkao-question-generator to generate reading comprehension questions.
+description: Use when the user wants to turn an English news, magazine, science, narrative, or current-affairs article into a Chinese middle-school entrance-exam (中考) reading passage. Extracts facts from the source, matches a writing logic module, and produces an original article with controlled vocabulary, quantified long-sentence variety, and zero verbatim sentences from the source (enforced by a pre-export original-quote check). Triggers on: 中考阅读, 外刊写作, 文章写作, 重写文章, 原创改写, 行文逻辑, 写一篇中考阅读, 把这篇文章改成中考阅读, standard, extended. Follow with zhongkao-question-generator to generate reading comprehension questions.
 ---
 
 # 中考阅读文章写作
@@ -229,12 +229,11 @@ mcp__zhongkao-mcp__check_passage(text="正文", level="standard", grade=9, prope
     | 标注类型 | 高亮色 | 含义 | 判断标准 |
     |---|---|---|---|
     | 事实来源 | 黄 `WD_COLOR_INDEX.YELLOW` | 该句承载从原文提取的客观事实 | 句子含人物、时间、地点、数字、过程、结果、因果等可核验信息点；不含比喻、修饰或评价性语言 |
-    | 保留原句 | 青 `WD_COLOR_INDEX.TURQUOISE` | 该句为直接引用的原文原句 | 整句逐字取自原文，未改写；其生词已纳入覆盖率计算 |
     | 长难句 | 粉 `WD_COLOR_INDEX.PINK` | 该句为长难句，并说明类型 | 句子含多层从句/非谓语/并列复合等复杂结构；类型在"长难句清单"节逐句说明 |
 
     注：一句可同时属于多个类别（如既是事实来源又是长难句），**正文允许对同一句叠加使用高亮**；图例中按该句最主要的属性着色即可。
 
-    报告需**单独一节清晰列举引用的原句**（逐句列出，注明生词已纳入覆盖率计算）。报告内文章全文字体格式与 Part2 题目 Word 中的正文一致（Arial 12pt、首行缩进 0.75cm、1.5 倍行距、中文字体微软雅黑；标题 Arial 20pt 加粗居中）。质量检查只写结论（严重项/工程带宽/Humanizer/地道性/最终状态）。
+    报告全文字体格式与 Part2 题目 Word 中的正文一致（Arial 12pt、首行缩进 0.75cm、1.5 倍行距、中文字体微软雅黑；标题 Arial 20pt 加粗居中）。质量检查只写结论（严重项/工程带宽/Humanizer/地道性/最终状态）。
 5. **不导出纯文章 Word**（不再调用 `mcp__zhongkao-mcp__export_article_docx`）；文章正文由 Part2 的题目 Word（`export_docx`）承载，正文在此处带注释版本即交付给 Part2。
 6. 聊天中**仅报告**"输出完成。`文章.docx` / `报告.docx`"，其中纯文章 Word 不导出、只报告报告 Word 文件名。
 
@@ -246,7 +245,7 @@ mcp__zhongkao-mcp__check_passage(text="正文", level="standard", grade=9, prope
 
 报告 Word 默认导出到 `<用户下载目录>/文章报告/`，目录不存在会自动创建（仅当用户未指定且确认采用默认时）。用 `run_export_report_docx`（python-docx）生成。
 
-文档内容：报告标题（20pt 加粗居中）+ 各章节（荧光标注图例、任务配置、事实提取清单与中心思想、带段内标注的文章全文、模块匹配、指标报告、段落词数、引用原句清单、长难句清单、生词中文注释、写作说明、质量检查）。
+文档内容：报告标题（20pt 加粗居中）+ 各章节（荧光标注图例、任务配置、事实提取清单与中心思想、带段内标注的文章全文、模块匹配、指标报告、段落词数、长难句清单、生词中文注释、写作说明、质量检查）。
 
 🔴 CHECKPOINT：**交付前必须确认（逐项勾选，缺一不可），全部确认前不导出**：
 - [ ] **① check_passage 已执行且 all_pass 为 true**（第 7 步硬性门槛；未达标不得进入导出）
