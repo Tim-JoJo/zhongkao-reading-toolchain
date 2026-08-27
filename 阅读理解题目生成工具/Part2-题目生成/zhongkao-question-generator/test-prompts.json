@@ -1,17 +1,17 @@
 [
   {
     "id": 1,
-    "prompt": "这篇文章写好了（附标准档正文，5 段，无标题），请 standard 档出 5 道中考阅读题并导出题目 Word。",
-    "expected": "走完整流程：workflow_init → draw_blueprint → 逐题编写（Q1 写作手法或细节 / Q2 词义或细节 / Q3 推理 / Q4 排序或推断 / Q5 主旨）→ validate_questions all_pass → 导出题目 Word（含带注释正文 + Answer Key + 答案解析）。Q3 若抽中 I-08 段落主旨必须转 main_idea/M-03 标注 MAIN IDEA；V 类题干以空线______+问号结尾。"
+    "prompt": "这篇文章已经写好了（附标准档正文，5 段，无标题），请出 5 道中考阅读理解题并导出题目 Word，保存到 ~/Downloads。",
+    "expected": "完整流程：执行前核对（带注释正文+all_pass）→ 阅读分析文章提取可考点 → workflow_init → draw_blueprint（5段文Q5主旨正常出best title）→ 段落落点规划（证据段落严格递增 Q1<Q2<Q3<Q4<Q5）→ 逐题编写（题干整句复用模板、解析引证两段式）→ 题组整体检查 → validate_questions all_pass → 双向追溯 → export_docx（带注释正文+Answer Key+解析导语不带编号）。"
   },
   {
     "id": 2,
-    "prompt": "这篇 7 段文章自带标题，出 5 题。要求：Q5 改出推断题、五题证据段落严格递增、猜词题目标词下划线、写作手法题标签 CRAFT。",
-    "expected": "遵守三条硬性规则：文章有标题则 Q5 不出 best title（调 draw_blueprint 传 article_has_title=true）；证据段落 Q1<Q2<Q3<Q4<Q5 单调递增（如 1→2→3→4→7）；猜词题题干写清自然段且正文目标词加单下划线（防粘连）；导出后 writing_technique 标签为 CRAFT。"
+    "prompt": "这篇 7 段文章自带标题，出 5 题。要求 Q5 不出最佳标题，并说说你打算把五道题的证据段落落在哪几段。",
+    "expected": "调 draw_blueprint(article_has_title=true) 使 Q5 自动改出推断题不出 M-01；七段文按 1→2→3→4→7 落点单调递增可跳不可回退；Q3 若抽中 I-08 须转 main_idea/M-03 标 MAIN IDEA；排序题标号用①②③④不用字母。"
   },
   {
     "id": 3,
-    "prompt": "出题前先用 python 直接验证两个代码行为（MCP 不可用就按 SKILL.md 的 python 兜底路径调 src/blueprint.py）：① draw_blueprint(article_has_title=true) 多跑几次，确认 Q5 永不抽 M-01、type 为 inference；② 确认 Q3 抽中 I-08 时自动转成 main_idea/M-03。验证通过后再正式出题。",
-    "expected": "用 `from src.blueprint import run_draw_blueprint` 复现 08-19 更新逻辑：article_has_title=true 时 Q5 从 I 类池抽取且不含 M-01；position=3 抽中 I-08 时 type_label=main_idea、code=M-03。验证结果与 SKILL.md 描述一致后再进入出题。"
+    "prompt": "先用 python 直接验证两个代码行为再出题：① draw_blueprint(article_has_title=true) 多跑几次，确认 Q5 永不抽 M-01 且 type 为 inference；② 确认 position=3 抽中 I-08 时自动转 main_idea/M-03。验证通过后再正式出题。",
+    "expected": "按 SKILL.md 的 python 兜底路径 `from src.blueprint import run_draw_blueprint` 直连源码复现规则；验证结果与 SKILL.md 第 3 步描述一致后才进入逐题编写；若发现行为与文档不符，报告差异而不是硬套文档。"
   }
 ]
