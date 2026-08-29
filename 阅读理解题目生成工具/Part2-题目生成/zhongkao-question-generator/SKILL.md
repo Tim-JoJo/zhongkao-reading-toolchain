@@ -124,10 +124,10 @@ mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题
 
 #### 猜词题取材规则（V 类）
 
-- **目标词必须为单个单词（不得选短语/词组）**，优先选**长难词**；短语（如 `give up`、`a good deal of` 之类）不可作猜词考点。
+- **目标词可为单个单词或短语/词组**：单词优先选**长难词**；短语（如 `give up`、`a good deal of` 之类）同样可作猜词考点，划线覆盖整个短语、题干用 words 复数（见「猜词题题干格式」）。
 - **允许选文中已加中文注释的词**：把该词的注释从正文去掉即可作考点（去掉注释后该词不再"给答案"）；去注释的操作不参与生词覆盖率计算。
 - **选词必须通读上下文**：目标词必须能靠**语境线索**（定义/对比/因果/身份提示等）推断出词义；**不得**选靠构词法直接拼出、或纯并列列举中的专业名词（如 `cybersecurity` = cyber+security，属"为出题而出题"）。要通读上下文，挑选真正需要推敲语义的词。
-- **猜词题题干格式**：统一句式 `What does the underlined word "X" (probably) mean?`，题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加单下划线即定位；不得以 `...` 结尾；validator 有咨询性检查。
+- **猜词题题干格式**：目标词为单词时用 `What does the underlined word "X" (probably) mean?`，为短语时用 `What do the underlined words "X" (probably) mean?`（words 复数，引号内为短语原文、含空格）；题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加单下划线即定位；不得以 `...` 结尾；validator 有咨询性检查。
 - **正文目标词加下划线**：猜词题的目标词，须在导出文档正文对应位置加**单下划线**标注，与题干中的词呼应。**划线词必须与原文词形逐字一致**：下划线须覆盖原文实际出现的完整单词（如原文 `anchoring` 就划 `anchoring`），不得只截取单词的一部分（如划 `anchoring` 的前半截 `anchor`），也不得将派生词换成原形词；若原文该词位于句首（如 `Primary`），按原文大小写划线即可。**加下划线不得破坏单词间距**：目标词通常需拆成独立 run 并设下划线，此时须保证其与前后单词之间仍有空格分隔，不得粘连（如 `texturewas` 应为 `texture was`）。若目标词原本带中文注释且已去掉注释，尤其注意注释两侧的空格归属——删注释后仍须保留单词间空格。
 
 #### 推断题范围规则（I-01 隐含信息）

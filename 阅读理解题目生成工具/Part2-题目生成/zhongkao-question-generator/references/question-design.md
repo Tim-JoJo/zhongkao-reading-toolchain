@@ -66,7 +66,7 @@
 
 ### 词义猜测题（V 类）
 
-取材规则：**目标词必须为单个单词，不得选短语/词组**（如 `stand against each other`、`give up` 等均不可作考点），优先选**长难词**。**允许选文中已加中文注释的词**：把该词的注释从正文去掉即可作考点（去掉注释后该词不再"给答案"），去注释的操作不参与生词覆盖率计算。**选词必须通读上下文**：目标词须能靠语境线索（定义/对比/因果/身份提示等）推断词义，**不得**选纯构词法或纯并列列举中的专业名词（如 `cybersecurity`）。**划线词必须与原文词形逐字一致**：下划线须覆盖原文实际出现的完整单词（如原文 `anchoring` 就划 `anchoring`），不得只截取单词的一部分（如划 `anchoring` 的前半截 `anchor`），也不得把派生词换成原形词；原文词在句首大写时（如 `Primary`）按原文划线即可。
+取材规则：**目标词可为单个单词或短语/词组**（真题两类考点并存，如划线单词 `anchoring`、划线短语 `feed back on`），单词优先选**长难词**。**允许选文中已加中文注释的词**：把该词的注释从正文去掉即可作考点（去掉注释后该词不再"给答案"），去注释的操作不参与生词覆盖率计算。**选词必须通读上下文**：目标词（含短语）须能靠语境线索（定义/对比/因果/身份提示等）推断词义，**不得**选纯构词法或纯并列列举中的专业名词（如 `cybersecurity`）。**划线词必须与原文词形逐字一致**：下划线须覆盖原文实际出现的完整单词或短语（如原文 `anchoring` 就划 `anchoring`，原文 `feed back on` 就划 `feed back on`），不得只截取其中一部分，也不得把派生词换成原形词；原文词在句首大写时（如 `Primary`）按原文划线即可。
 
 | 编号 | 考点 | 命题模板 | 硬约束 |
 |------|------|---------|--------|
@@ -75,7 +75,7 @@
 | V-03 | 因果关系线索 | What does the underlined word "X" probably mean? | 原文含 because / so / lead to / result in 因果链 |
 | V-04 | 构词法线索 | What does the underlined word "X" mean? | 超纲词根 + 课标词缀 |
 
-> **猜词题（V 类）题干格式**：统一句式 `What does the underlined word "X" (probably) mean?`，题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加**单下划线**即定位，不得以 `...` 结尾。**划线词必须与原文词形逐字一致**（下划线覆盖原文实际出现的完整单词，如原文 `anchoring` 不得只划前半截 `anchor`；句首大写词按原文划线即可；拆成独立 run 设下划线时须保持与前后单词间的空格，不得粘连，如 `texturewas` 应为 `texture was`）。validator 对此有咨询性检查（同时接受真题句式与旧空线格式）。
+> **猜词题（V 类）题干格式**：目标词为单词时用 `What does the underlined word "X" (probably) mean?`，为短语时用 `What do the underlined words "X" (probably) mean?`（words 复数，引号内为短语原文、可含空格），题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加**单下划线**即定位，不得以 `...` 结尾。**划线词必须与原文词形逐字一致**（下划线覆盖原文实际出现的完整单词或短语，如原文 `anchoring` 不得只划前半截 `anchor`、原文 `feed back on` 须整体划线；句首大写词按原文划线即可；拆成独立 run 设下划线时须保持与前后单词间的空格，不得粘连，如 `texturewas` 应为 `texture was`）。validator 对此有咨询性检查（同时接受真题句式与旧空线格式）。
 
 ### 推理判断题（I 类）
 
