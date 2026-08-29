@@ -151,12 +151,15 @@ def check_original_quotes(text: str, source_text: str, similarity_threshold: flo
 def validate_questions(
     questions: list[dict],
     option_count: int = 4,
+    article_has_title: bool = False,
 ) -> dict[str, Any]:
     """题目质量校验：检查选项格式、答案唯一性、题目类型覆盖等。
 
     Args:
         questions: 题目列表，每题为 {"id": 1, "stem": "...", "options": ["A. ...", ...], "answer": "D", "type": "detail"}
         option_count: 每题应有选项数（3 或 4）
+        article_has_title: 文章是否自带标题。带标题文章 Q5 按硬性规则改出推断题（不出
+            best title），main_idea 不作硬性覆盖要求；不传则维持原行为（要求覆盖 main_idea）
 
     Returns:
         dict: {
@@ -167,7 +170,7 @@ def validate_questions(
             "all_pass": bool
         }
     """
-    result = run_validate_questions(questions, option_count)
+    result = run_validate_questions(questions, option_count, article_has_title)
     # 自动记录校验结果到工作流状态（供 export_docx 门禁用）
     if "error" not in result:
         record_validate(result)

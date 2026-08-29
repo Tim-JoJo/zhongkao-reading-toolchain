@@ -10,3 +10,6 @@ _*.txt
 
 # macOS
 .DS_Store
+
+# MCP 工作流运行时状态(测试/会话产物,不入库)
+.zhongkao_workflow.json
