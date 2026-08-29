@@ -192,9 +192,12 @@ mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题
 ```
 mcp__zhongkao-mcp__validate_questions(
     questions=[{"id": 1, "stem": "...", "options": [...], "answer": "D", "type": "detail"}, ...],
-    option_count=4
+    option_count=4,
+    article_has_title=true   # 文章自带标题时必传（与第 3 步 draw_blueprint 同名参数同源）
 )
 ```
+
+> **文章自带标题时须加传 `article_has_title=true`**：validator 据此放宽 main_idea 硬性覆盖——带标题文章 Q5 已按硬性规则改出推断题，main_idea 仅在 Q3 抽中 I-08（自动转 M-03）时出现；不传该参数则 type_coverage 必报 `review_required` 且重抽蓝图无法消除。python 兜底路径同理：`run_validate_questions(questions, option_count, article_has_title)`。
 
 自动检查项：
 | 检查项 | 标准 | 自动判定 |

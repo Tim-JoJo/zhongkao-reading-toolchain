@@ -35,6 +35,7 @@ ABSOLUTE_PATTERNS = [
 def run_validate_questions(
     questions: list[dict],
     option_count: int = 4,
+    article_has_title: bool = False,
 ) -> dict[str, Any]:
     if option_count not in OPTION_LETTERS:
         return {"error": f"option_count 须为 3 或 4，收到 {option_count}"}
@@ -99,7 +100,12 @@ def run_validate_questions(
     # 5 题结构：Q1 写作手法(30%) 或 细节理解(70%) + Q2 词义/细节 + Q3 推理 + Q4 排序(80%) 或 推断(20%) + Q5 主旨
     # writing_technique 非必选：Q1 抽中 detail 时由 detail 替代该位置
     # ordering 非必选：Q4 按 1:4 权重可能抽中推断题（inference），此时题组无排序题属正常
-    expected_core = {"vocabulary_or_detail", "inference", "main_idea"}
+    expected_core = {"vocabulary_or_detail", "inference"}
+    # 文章已有标题时 Q5 按硬性规则改出推断题（不出 M-01/M-02），main_idea 仅在 Q3
+    # 抽中 I-08（自动转 M-03，约 5%）时出现，不作硬性覆盖要求——否则带标题文章
+    # 的 type_coverage 必报 review_required 且重抽蓝图无法消除
+    if not article_has_title:
+        expected_core.add("main_idea")
     # 旧 4 题结构兼容：detail 视为 vocabulary_or_detail 的同类，text_feature 视为（词义/排序）可替代
     legacy_aliases = {
         "detail": "vocabulary_or_detail",
@@ -113,6 +119,8 @@ def run_validate_questions(
         checks["type_coverage"] = "review_required"
     else:
         checks["type_coverage"] = "pass"
+        if article_has_title and "main_idea" not in normalized:
+            issues.append("文章已有标题：Q5 已按硬性规则改出推断题，main_idea 不作硬性覆盖（本次题组未含主旨题，属正常）")
 
     # ── 检查 4: 选项长度平衡 ──
     balance_ok = True

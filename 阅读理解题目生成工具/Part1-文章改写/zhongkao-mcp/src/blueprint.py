@@ -313,6 +313,8 @@ def run_draw_blueprint(seed: int | None = None, article_has_title: bool = False)
             type_label = "main_idea"
             code = "M-03"
             function = "段落主旨"
+            # name/template/constraint 同步取 M-03 条目，避免沿用 I-08 的条目信息
+            info = BLUEPRINT_POOL["main_idea"]["M-03"]
         elif position == 5 and article_has_title:
             # 文章已有标题时，Q5 不出「最佳标题」(M-01) 题型，改为全文推断题（I 类，
             # 排除 I-08 段落主旨——那属段内主旨，不适合全文位置）
