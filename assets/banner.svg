@@ -20,14 +20,12 @@
   <text x="800" y="266" text-anchor="middle" font-size="25" fill="#7c8798">外刊文章 → ① 生成工具（词数 ≤350 · 课标词表核查）→ ② 追加工具（二卷题型）→ Word 成品</text>
 
   <g font-size="22" fill="#c7d0dd">
-    <rect x="252" y="316" width="272" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
-    <text x="388" y="346" text-anchor="middle">4 Skills · 专家 SOP</text>
-    <rect x="548" y="316" width="308" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
-    <text x="702" y="346" text-anchor="middle">2 MCP Server · 质量门禁</text>
-    <rect x="880" y="316" width="240" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
-    <text x="1000" y="346" text-anchor="middle">10/10 样例通过</text>
-    <rect x="1144" y="316" width="180" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
-    <text x="1234" y="346" text-anchor="middle">MIT 开源</text>
+    <rect x="392" y="316" width="272" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
+    <text x="528" y="346" text-anchor="middle">4 Skills · 专家 SOP</text>
+    <rect x="692" y="316" width="308" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
+    <text x="846" y="346" text-anchor="middle">2 MCP Server · 质量门禁</text>
+    <rect x="1028" y="316" width="180" height="46" rx="23" fill="#1f2635" stroke="#2b3446"/>
+    <text x="1118" y="346" text-anchor="middle">MIT 开源</text>
   </g>
 
   <text x="1560" y="398" text-anchor="end" font-size="20" fill="#5b6577">MCP · Claude Code / Claude Desktop · Python 3.10+</text>
