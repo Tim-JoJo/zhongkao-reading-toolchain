@@ -1,39 +1,46 @@
-"""文档一致性 hook —— 抓"改了一处、忘了另一处"的陈旧口径与悬空引用。
+"""文档一致性 hook —— 抓"改了一处、忘了另一处"的陈旧口径、悬空引用与重复定义。
 
 对应踩过的坑：
-  1. 词表口径在 5 处并存（1601 / 2,795 / 3,585），互相矛盾
+  1. 词表口径在 5 处并存（1601 / 2,795 / 3,585 / 3,686），互相矛盾
   2. 荧光图例写"三种高亮色"但表里只有 2 行，而导出器实际支持 3 色
   3. SKILL 引用的 references 路径不存在 / 跨 skill 相对路径改名未同步
-  4. "必答 N 问" 标题下的条目数与 N 不符
-  5. 反例黑名单编号范围与正文引用范围不符
+  4. "必答 N 问" 标题下的条目数与 N 不符（实列 5 条却写 3 问）
+  5. 反例黑名单编号范围与正文引用范围、与 reference 文件三者不一致
   6. MCP 工具表与文档声明不符（弃用工具又冒出来）
   7. 阈值/导出前缀在多个文件里各抄一份 → 漂移
 """
 from __future__ import annotations
 
 import re
+
 import pytest
-from conftest import (AW, DESIGN_LOGIC, GEN, MCP, QG, RC, REPO, REW, VOCAB_MD,
-                      KNOWN_DIVERGENCES)
+
+from conftest import (AW, DESIGN_LOGIC, GEN, MCP, QG, RC, REPO, REW,
+                      SHARED_THRESHOLDS, VOCAB_MD, VOCAB_SRV)
+
+# 已废弃、无法复核的词表口径（词表说明区自己会提到它们以作禁止，其余文件一律不得出现）
+FORBIDDEN_VOCAB_NUMBERS = ("1601", "2,795", "3,585", "3,581", "2,795+")
+CURRENT_VOCAB_NUMBERS = ("3686", "3570")
 
 
 def md_files():
-    # 排除 .git 与 hook/ 自身：hook 的 README 会按设计记录历史口径（1601 / 2,795）
+    # 排除 .git 与 hook/ 自身（hook 的 README 按设计记录历史口径）
     return [p for p in REPO.rglob("*.md") if ".git" not in p.parts and "hook" not in p.parts]
 
 
 # ── 1. 词表口径 ──
 def test_vocab_count_single_source():
-    assert "3585" in VOCAB_MD.read_text(encoding="utf-8"), "词表 md 头部应有权威口径计数"
+    body = VOCAB_MD.read_text(encoding="utf-8")
+    for n in CURRENT_VOCAB_NUMBERS:
+        assert n in body, f"词表说明区缺少实测口径 {n}"
     bad = []
     for p in md_files():
         if p.name.startswith("二级、三级词汇表"):
             continue
         for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
-            if "1601" in line:
-                bad.append(f"{p.relative_to(REPO)}:{i} 出现无出处的 1601 条")
-            if "2,795" in line and not any(k in line for k in ("含", "补充", "口径", "3,585")):
-                bad.append(f"{p.relative_to(REPO)}:{i} 裸用 2,795（须绑定 3,585 口径说明）")
+            for n in FORBIDDEN_VOCAB_NUMBERS:
+                if n in line:
+                    bad.append(f"{p.relative_to(REPO)}:{i} 出现已废弃口径 {n}：{line.strip()[:60]}")
     assert not bad, "词表口径不一致：\n" + "\n".join(bad)
 
 
@@ -45,7 +52,7 @@ def test_highlight_colors_match_docs():
     assert exporter_colors == {"yellow", "turquoise", "pink"}, exporter_colors
 
     claude = (GEN / "CLAUDE.md").read_text(encoding="utf-8")
-    assert "三种高亮色" not in claude, "CLAUDE.md 仍写「三种高亮色」"
+    assert "三种高亮色" not in claude, "CLAUDE.md 又写回「三种高亮色」"
     m = re.search(r"荧光标注图例（[^）]*?([两三二])种高亮色", claude)
     assert m, "CLAUDE.md 应有「荧光标注图例（N 种高亮色…）」"
     declared = {"两": 2, "二": 2, "三": 3}[m.group(1)]
@@ -54,7 +61,7 @@ def test_highlight_colors_match_docs():
 
     aw = AW.read_text(encoding="utf-8")
     assert "三种高亮色" not in aw
-    assert "本流程只用**黄、粉两色**" in aw, "article-writer SKILL 应显式限定两色并说明第三色启用条件"
+    assert "本流程只用**黄、粉两色**" in aw
 
 
 # ── 3. 引用路径可达 ──
@@ -66,21 +73,19 @@ def test_referenced_paths_exist(skill):
     missing = []
     for ref in REF_RE.findall(skill.read_text(encoding="utf-8")):
         if not (ref.startswith("references/") or ref.startswith("../")):
-            continue   # 只查显式相对路径，散文里提到的 "dir/file.md" 不当作引用
-        p = (skill.parent / ref.replace("\\", "/")).resolve()
-        if not p.exists():
+            continue   # 只查显式相对路径；散文里提到的 "dir/file.md" 不算引用
+        if not (skill.parent / ref.replace("\\", "/")).resolve().exists():
             missing.append(ref)
     assert not missing, f"{skill.name} 引用了不存在的文件：{missing}"
 
 
 def test_cross_skill_contract_paths():
     for name in ("module-library.md", "mental-models-heuristics.md"):
-        p = REW.parent / "references" / name
-        assert p.exists(), f"article-writer 硬依赖的 {name} 不存在：{p}"
+        assert (REW.parent / "references" / name).exists(), "article-writer 硬依赖的 reference 缺失"
     assert "reading-explorer-writing" in AW.read_text(encoding="utf-8")
 
 
-# ── 4. 「必答 N 问」与实际条目数一致 ──
+# ── 4. 「必答 N 问」与条目数一致 ──
 @pytest.mark.parametrize("skill", [RC, REW])
 def test_numbered_checkpoint_count(skill):
     lines = skill.read_text(encoding="utf-8").splitlines()
@@ -89,32 +94,36 @@ def test_numbered_checkpoint_count(skill):
         m = re.search(r"必答 *(\d+) *问", line)
         if not m:
             continue
-        declared = int(m.group(1))
-        counted = 0
+        declared, counted = int(m.group(1)), 0
         for nxt in lines[i + 1:]:
             if re.match(r"^\s*\d+[.、]\s", nxt):
                 counted += 1
-            elif counted and nxt.strip() and not re.match(r"^\s*\d+[.、]\s", nxt):
+            elif counted and nxt.strip():
                 break
         if counted != declared:
             bad.append(f"{skill.name}:{i+1} 写「必答 {declared} 问」但实列 {counted} 条")
     assert not bad, "\n".join(bad)
 
 
-# ── 5. 反例黑名单编号与引用范围一致 ──
-def test_rc_blacklist_numbering():
-    rc = RC.read_text(encoding="utf-8")
-    ids = [int(n) for n in re.findall(r"^\|\s*W(\d+)\s*\|", rc, re.M)]
-    assert ids, "未解析到 rc 反例黑名单"
-    assert max(ids) == len(ids), f"W 编号不连续：{sorted(ids)}"
-    for rng in re.findall(r"W1-W(\d+)", rc):
-        assert int(rng) == max(ids), f"正文引用 W1-W{rng}，但黑名单实到 W{max(ids)}"
+# ── 5. 反例黑名单：SKILL / reference / 正文引用 三者编号必须一致 ──
+def _w_ids(p):
+    return [int(n) for n in re.findall(r"^\|\s*W(\d+)\s*\|", p.read_text(encoding="utf-8"), re.M)]
 
-    dl = [int(n) for n in re.findall(r"^\|\s*W(\d+)\s*\|", DESIGN_LOGIC.read_text(encoding="utf-8"), re.M)]
-    if max(dl) != max(ids):
-        assert "rc_blacklist_w11" in KNOWN_DIVERGENCES, (
-            f"SKILL 黑名单到 W{max(ids)}、design-logic.md 到 W{max(dl)}，"
-            "该差异未在 conftest.KNOWN_DIVERGENCES 登记")
+
+def test_rc_blacklist_numbering_is_uniform():
+    rc, dl = RC.read_text(encoding="utf-8"), DESIGN_LOGIC.read_text(encoding="utf-8")
+    ids, dl_ids = _w_ids(RC), _w_ids(DESIGN_LOGIC)
+    assert ids and dl_ids, "未解析到 W 编号表"
+    assert max(ids) == len(ids), f"SKILL 黑名单编号不连续：{sorted(ids)}"
+    assert max(dl_ids) == len(dl_ids), f"design-logic 编号不连续：{sorted(dl_ids)}"
+    assert max(ids) == max(dl_ids), (
+        f"SKILL 黑名单到 W{max(ids)}，references/design-logic.md 到 W{max(dl_ids)} —— 必须一致")
+    for rng in re.findall(r"W1-W(\d+)", rc):
+        assert int(rng) == max(ids), f"正文引用 W1-W{rng}，黑名单实到 W{max(ids)}"
+    m = re.search(r"## 四、反模式详解\((\d+) 条", dl)
+    assert m and int(m.group(1)) == max(dl_ids), "design-logic 小节标题的条数与表体不符"
+    m = re.search(r"\|\s*`references/design-logic\.md`.*?(\d+) 反模式详解", rc)
+    assert m and int(m.group(1)) == max(ids), "SKILL Reference 索引里的条数与黑名单不符"
 
 
 # ── 6. MCP 工具表 ──
@@ -130,27 +139,49 @@ def test_mcp_tool_set():
 
 # ── 7. 阈值与导出前缀：单一来源 ──
 def test_threshold_single_source():
-    src = (MCP / "mcp_server.py").read_text(encoding="utf-8")
-    assert "LEVEL_THRESHOLDS = {" not in src, "mcp_server.py 又抄了一份阈值"
-    assert "from src.thresholds import" in src
-    tt = (MCP / "tests/test_tools.py").read_text(encoding="utf-8")
-    assert "from src.thresholds import" in tt, "tests 又抄了一份阈值"
-    assert "220, 240" not in tt
+    assert SHARED_THRESHOLDS.exists(), "共用阈值应在 Part1-文章改写/thresholds.py（两个 server 的共同上级）"
+    shared = SHARED_THRESHOLDS.read_text(encoding="utf-8")
+    assert "LEVEL_THRESHOLDS = {" in shared and "GRADE_LIMITS = {" in shared
 
-    vs = (GEN / "Part1-文章改写/vocab-checker/mcp_server.py").read_text(encoding="utf-8")
-    mp = re.search(r'"max_proper": *(\d+)', vs)
-    assert mp, "vocab-checker 应有 GRADE_LIMITS"
-    if int(mp.group(1)) != 999:
-        assert "grade_max_proper" in KNOWN_DIVERGENCES, (
-            "vocab-checker 的 max_proper 与 zhongkao-mcp 不一致且未登记理由")
+    for f in (MCP / "mcp_server.py", VOCAB_SRV, MCP / "tests/test_tools.py"):
+        txt = f.read_text(encoding="utf-8")
+        assert "LEVEL_THRESHOLDS = {" not in txt, f"{f.name} 又抄了一份 LEVEL_THRESHOLDS"
+        assert "GRADE_LIMITS = {" not in txt, f"{f.name} 又抄了一份 GRADE_LIMITS"
+        assert "from thresholds import" in txt, f"{f.name} 应 import 共用阈值"
+    tt = (MCP / "tests/test_tools.py").read_text(encoding="utf-8")
+    assert "220, 240" not in tt, "tests 里那份 [220,240] 旧档又回来了"
+
+    # 专名：SKILL 第 4 步「不对专名设置数量限制」→ 阈值不得再出现 5 这类限制
+    assert '"max_proper": 999' in shared
+    assert '"max_proper": 5' not in VOCAB_SRV.read_text(encoding="utf-8"), \
+        "vocab-checker 又自行限制了专名数量（与 SKILL 冲突）"
+
+
+def test_mcp_pin_matches_code_api():
+    """代码用的是 mcp v1 的 FastMCP ⇒ requirements 必须钉 <2。
+
+    背景：mcp 2.x 把 FastMCP 改名为 MCPServer（from mcp.server.mcpserver import MCPServer），
+    而 `mcp>=1.0` 这条宽松约束会让**全新安装**解析到 2.x，MCP server 直接 import 失败。
+    实测：venv 装到 mcp 2.2.0 时 `from mcp.server.fastmcp import FastMCP` 抛 ModuleNotFoundError。
+    若将来迁移到 2.x，请同时删除本 hook 与 requirements 里的 <2 约束。
+    """
+    users = [p for p in REPO.rglob("*.py")
+             if "hook" not in p.parts and "mcp.server.fastmcp" in p.read_text(encoding="utf-8")]
+    assert users, "预期仍有模块使用 mcp v1 的 FastMCP（已迁移到 2.x？请同步删掉本 hook）"
+    bad = []
+    for p in REPO.rglob("requirements.txt"):
+        txt = p.read_text(encoding="utf-8")
+        if any(l.strip().startswith("mcp") for l in txt.splitlines()) and "<2" not in txt:
+            bad.append(str(p.relative_to(REPO)))
+    assert not bad, f"这些 requirements 未把 mcp 钉在 <2，新装环境会拉到 2.x 导致 FastMCP 不存在：{bad}"
 
 
 def test_export_prefix_single_source():
     lit = []
     for p in REPO.rglob("*.py"):
-        if ".git" in p.parts or p.name == "exporter.py" or "hook" in p.parts:
+        if ".git" in p.parts or "hook" in p.parts or p.name == "exporter.py":
             continue
-        if '"文档已保存至' in p.read_text(encoding="utf-8") or "文档已保存" in p.read_text(encoding="utf-8"):
+        if "文档已保存" in p.read_text(encoding="utf-8"):
             lit.append(str(p.relative_to(REPO)))
     assert not lit, f"导出成功前缀被硬编码到了 {lit}（判定请走 exporter.is_export_ok）"
     ms = (MCP / "mcp_server.py").read_text(encoding="utf-8")
