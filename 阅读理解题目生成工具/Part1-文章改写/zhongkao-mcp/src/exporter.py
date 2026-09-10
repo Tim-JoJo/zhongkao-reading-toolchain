@@ -85,10 +85,6 @@ def _write_runs_with_underline(p, text: str, target: str | None) -> bool:
             _set_run_font(r)
             return False
         idx, hit = low, text[low:low + len(target)]
-    if idx < 0:
-        r = p.add_run(text)
-        _set_run_font(r)
-        return False
     for seg, underline in ((text[:idx], False), (hit, True), (text[idx + len(hit):], False)):
         if not seg:
             continue

@@ -51,8 +51,8 @@ def _default_state() -> dict[str, Any]:
     return {
         "level": None,
         "part1": {
-            "check_passage": None,   # 最近一次 {all_pass, word_count, oov_distinct, fingerprint, at}
-        "check_fingerprints": [],  # 已通过校验的正文指纹清单（多 agent 共用工作目录时互不覆盖）
+            "check_passage": None,     # 最近一次 {all_pass, word_count, oov_distinct, fingerprint, at}
+            "check_fingerprints": [],  # 已通过校验的正文指纹清单（多 agent 共用工作目录时互不覆盖）
             "report_exported": False,
         },
         "part2": {

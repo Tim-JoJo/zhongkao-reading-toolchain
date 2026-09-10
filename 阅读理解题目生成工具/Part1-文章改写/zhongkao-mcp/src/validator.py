@@ -65,12 +65,13 @@ def run_validate_questions(
                 issues.append(f"题{qid} 选项{i+1}：应以 {expected_prefix} 开头，实际 '{opt[:3]}...'")
                 format_ok = False
         stem = q.get("stem", "")
-        if stem and not stem.strip().endswith("?") and not stem.strip().endswith("?"):
+        # 半角/全角问号都算问号结尾（条件原本重复写了两遍半角 "?"，全角 "？" 会被误报缺问号）
+        if stem and not stem.strip().endswith(("?", "？")):
             # 题干应以问号结尾，但排序题以 ①~④ 事件清单结尾，故仅提醒。
             # 用词边界匹配：旧写法 "how" in stem.lower() 会被 "shows" 里的 how 命中，
             # 导致 O-02 模板（Which of the following shows the correct order…?）必然误报。
             if re.search(r"\b(?:why|how)\b", stem, re.IGNORECASE) or "best title" in stem.lower():
-                if not stem.strip().endswith("?"):
+                if not stem.strip().endswith(("?", "？")):
                     issues.append(f"题{qid}：题干可能缺少问号")
     checks["option_format"] = "pass" if format_ok else "fail"
 
@@ -89,8 +90,8 @@ def run_validate_questions(
         if q.get("type") == "vocabulary_or_detail" and str(q.get("code", "")).startswith("V"):
             # 猜词题题干：真题格式 `What does the underlined word "X" in Paragraph N (probably) mean?`
             # 或兼容旧空线格式 `The word "X" ... means ______?`；须以问号结尾
-            zhen_ti = re.match(r'^What do(es)? the underlined (?:word|words).*\bmean\b.*\?$', stem, re.IGNORECASE)
-            if not (zhen_ti or ("______" in stem and stem.endswith("?"))):
+            zhen_ti = re.match(r'^What do(es)? the underlined (?:word|words).*\bmean\b.*[?？]$', stem, re.IGNORECASE)
+            if not (zhen_ti or ("______" in stem and stem.endswith(("?", "？")))):
                 issues.append(f"题{qid}：猜词题 stem 应为真题格式 'What does the underlined word \"X\" in Paragraph N (probably) mean?' 或以 '______?' 空线结尾，当前为 '{stem}'")
 
     # ── 检查 2: 答案唯一性 ──
@@ -98,7 +99,7 @@ def run_validate_questions(
     for q in questions:
         qid = q.get("id", "?")
         opts = q.get("options", [])
-        answer = q.get("answer", "").strip().upper()
+        answer = str(q.get("answer") or "").strip().upper()
         if answer not in letters:
             issues.append(f"题{qid}：答案 '{answer}' 不在有效字母 {letters} 中")
             answer_ok = False
@@ -147,7 +148,7 @@ def run_validate_questions(
     for q in questions:
         qid = q.get("id", "?")
         opts = q.get("options", [])
-        answer = q.get("answer", "").strip().upper()
+        answer = str(q.get("answer") or "").strip().upper()
         correct_idx = letters.index(answer) if answer in letters else -1
         for i, opt in enumerate(opts):
             # 只检查干扰项（非正确答案）

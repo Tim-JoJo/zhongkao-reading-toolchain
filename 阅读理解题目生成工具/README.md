@@ -7,7 +7,7 @@
 ## 工具构成
 
 ```
-阅读理解题目生成工具-可分发版/
+阅读理解题目生成工具/
 ├── README.md                        ← 本文件：部署 + 使用指南（agent 先读这里）
 ├── CLAUDE.md                        ← 全局操作约定（agent 必须在任务开始时读取）
 ├── .mcp.json                        ← MCP 配置模板（把 <工具根目录> 换成实际路径）
@@ -45,11 +45,11 @@ python -m spacy download en_core_web_sm     # 生词检查所需的词形还原�
 
 ### 2. 配置 .mcp.json
 
-把包根目录 `.mcp.json` 复制到当前 Claude Code 项目的根目录，并把两处 `<工具根目录>` 替换为本工具包的实际绝对路径。路径分隔符正斜杠 `/` 与 Windows 双反斜杠 `\\` 均可（如 `C:\Users\me\阅读理解题目生成工具-可分发版\Part1-文章改写\vocab-checker\mcp_server.py`）。
+把包根目录 `.mcp.json` 复制到当前 Claude Code 项目的根目录，并把两处 `<工具根目录>` 替换为本工具包的实际绝对路径。路径分隔符正斜杠 `/` 与 Windows 双反斜杠 `\\` 均可（如 `C:\Users\me\阅读理解题目生成工具\Part1-文章改写\vocab-checker\mcp_server.py`）。
 
 配置成功后，会话里应出现这些工具：
 
-- `mcp__zhongkao-mcp__check_passage` / `draw_blueprint` / `validate_questions` / `export_docx` / `export_article_docx`
+- `mcp__zhongkao-mcp__check_passage` / `check_original_quotes` / `draw_blueprint` / `validate_questions` / `export_docx`
 - `mcp__zhongkao-mcp__workflow_init` / `workflow_status` / `workflow_reset`（工作流状态管理：记录各硬性步骤完成情况，`export_docx` 缺步时自动拦截）
 - `mcp__vocab-checker__check_text` / `check_grade_level` / `check_article`
 

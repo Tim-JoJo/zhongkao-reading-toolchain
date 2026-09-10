@@ -47,6 +47,23 @@ def test_vocab_count_single_source():
     assert not bad, "词表口径不一致：\n" + "\n".join(bad)
 
 
+def test_vocab_count_single_source_in_code():
+    """废弃口径也不得出现在 .py / .json 里 —— 曾漏网三处：
+    .mcp.json 的 server description、vocab_checker.py 模块 docstring、
+    vocab-checker/mcp_server.py 的 instructions（md 扫描覆盖不到它们）。"""
+    bad = []
+    for p in REPO.rglob("*"):
+        if (".git" in p.parts or "hook" in p.parts or "__pycache__" in p.parts
+                or p.suffix not in (".py", ".json")
+                or p.name.startswith("二级、三级词汇表")):
+            continue
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            for n in FORBIDDEN_VOCAB_NUMBERS:
+                if n in line:
+                    bad.append(f"{p.relative_to(REPO)}:{i} 出现已废弃口径 {n}：{line.strip()[:60]}")
+    assert not bad, "代码/配置里的词表口径不一致：\n" + "\n".join(bad)
+
+
 # ── 2. 荧光标注色数 ──
 def test_highlight_colors_match_docs():
     src = (MCP / "src/exporter.py").read_text(encoding="utf-8")

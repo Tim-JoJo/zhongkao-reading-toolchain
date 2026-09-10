@@ -127,9 +127,9 @@ def _check_grade_level(vocab_result: dict, grade_limits: dict) -> dict:
     # 从 vocab_result 中复用 spaCy doc（避免重复 nlp(text)）
     doc = vocab_result.get("_doc")
     if doc is None:
-        # 兜底：如果调用方没传 doc（如 vocab-checker MCP 直接调用），重新解析
-        from vocab_checker import _get_checker
-        doc = _get_checker().nlp("")  # 不会走到这里，但保留防御
+        # 兜底：如果调用方没传 doc，用本模块的单例重新解析空文本
+        # （vocab_checker 里公开名是 get_checker，没有 _get_checker——之前这里 import 会直接 ImportError）
+        doc = _get_checker().nlp("")
     sentences = [s for s in doc.sents]
     total_words = sum(1 for t in doc if not t.is_punct and not t.is_space and not t.like_num and not t.is_currency and not t.is_bracket and not t.is_quote)
     avg_sent_len = total_words / len(sentences) if sentences else 0

@@ -132,7 +132,6 @@ def test_check_passage():
     assert isinstance(result["grade_check"]["all_pass"], bool), "grade_check.all_pass 应为布尔值"
     print(f"\n  ℹ️ all_pass={result['all_pass']}（覆盖率 98.46% 超出 95%-97% band，预期为 review_required）")
     print("\n  ✅ check_passage 通过")
-    return True
 
 
 def test_validate_questions():
@@ -157,7 +156,6 @@ def test_validate_questions():
     assert result["checks"]["option_format"] == "pass", "选项格式应通过"
     assert result["checks"]["unique_answer"] == "pass", "答案唯一性应通过"
     print("\n  ✅ validate_questions 通过")
-    return True
 
 
 def test_export_docx():
@@ -183,7 +181,6 @@ def test_export_docx():
     Path(output_path).unlink()
     print(f"  (已清理测试文件)")
     print("\n  ✅ export_docx 通过")
-    return True
 
 
 if __name__ == "__main__":

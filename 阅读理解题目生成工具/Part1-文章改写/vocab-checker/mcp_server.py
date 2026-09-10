@@ -19,7 +19,7 @@ except ModuleNotFoundError:                 # mcp >=2：同一能力改名为 MC
 # ── 初始化 MCP 服务器 ──
 mcp = FastMCP(
     "vocab-checker",
-    instructions="初中英语阅读命题生词检查器 — 基于2022版课标二级、三级词汇表（2,795词），提供文本超纲词检测、覆盖率统计和年级合规校验。",
+    instructions="初中英语阅读命题生词检查器 — 基于2022版课标二级、三级词汇表（3,686 个可匹配词形），提供文本超纲词检测、覆盖率统计和年级合规校验。",
 )
 
 # ── 延迟加载 checker（避免启动超时） ──
@@ -44,7 +44,7 @@ def _get_checker():
 def check_text(text: str, proper_names: list[str] | None = None) -> dict[str, Any]:
     """检查英文文本中的超纲词汇和课标词覆盖率。
 
-    依据 2022 版义务教育英语课标二级、三级词汇表（2,795 词），
+    依据 2022 版义务教育英语课标二级、三级词汇表（3,686 个可匹配词形），
     利用 spaCy 词形还原 + 派生词缀匹配，输出：
       - 课标词覆盖率
       - 超纲词列表（去重 + 频次排序）
@@ -141,19 +141,19 @@ def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
 
     c = _get_checker()
     result = c.check(text)
-    result.pop("_doc", None)
-
     limits = GRADE_LIMITS[grade]
     unknown_tokens = result["unknown_tokens"]
     proper_count = len(result.get("proper_noun_words", []))
-    total_words = result["total_tokens"]
-    oov_ratio = unknown_tokens / total_words if total_words else 0.0
+    oov_ratio = unknown_tokens / result["total_tokens"] if result["total_tokens"] else 0.0
     oov_lo, oov_hi = limits["oov_ratio"]
 
-    # 计算平均句长
-    doc = c.nlp(text)
+    # 平均句长：复用 check() 返回的 _doc，避免同一文本跑第二次 NLP；
+    # 词元口径与 zhongkao-mcp/src/checker.py 一致（排除标点/空格/数字/货币/括号/引号）
+    doc = result.pop("_doc", None) or c.nlp(text)
     sentences = [s for s in doc.sents]
-    total_words = sum(1 for t in doc if not t.is_punct and not t.is_space)
+    total_words = sum(1 for t in doc if not t.is_punct and not t.is_space
+                      and not t.like_num and not t.is_currency
+                      and not t.is_bracket and not t.is_quote)
     avg_sent_len = total_words / len(sentences) if sentences else 0
 
     checks = {

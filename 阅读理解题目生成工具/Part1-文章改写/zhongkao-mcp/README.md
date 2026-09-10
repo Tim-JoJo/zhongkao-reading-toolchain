@@ -37,6 +37,8 @@ ls ../vocab-checker/mcp_server.py
 
 ## Tools
 
+注册的全部工具：`check_passage` · `check_original_quotes` · `validate_questions` · `export_docx` · `draw_blueprint` · `workflow_init` / `workflow_status` / `workflow_reset`。常用三个如下。
+
 ### `check_passage` — 正文指标全检
 
 组合 vocab-checker（spaCy 词形还原 + 派生词缀）和结构分析，对照档位阈值逐项判定。
@@ -45,7 +47,7 @@ ls ../vocab-checker/mcp_server.py
 check_passage(
     text="China's economy went up by 4.7 percent...",
     level="standard",      # standard | extended
-    grade=9,               # 7 | 8 | 9
+    grade=9,               # 只面向九年级，固定 9
     proper_names=["China"] # 保留的专名
 )
 ```
@@ -76,12 +78,12 @@ export_docx(
     body="In the first months of 2026...",
     questions=[{"stem": "...", "options": [...]}, ...],
     answer_key=["D", "A", "B", "C"],
-    explanations=["1. 解析：...", "2. 解析：...", "3. 解析：...", "4. 解析：..."],  # 可选
+    explanations=["导语（全文总结，不加编号）", "逐题详解 1", "逐题详解 2", ...],  # 可选
     output_path="reading_exercise.docx"
 )
 ```
 
-`explanations`（可选）：每题答案解析，与题目一一对应，渲染在 Answer Key 之后。
+`explanations`（可选）：第 1 条为导语（独立成段、不加编号），其余逐题详解与题目一一对应，渲染在 Answer Key 之后；条目内不要自带数字标号，导出器从 `1.` 开始自动编号（自带编号会被剥掉）。
 
 ## 与 vocab-checker 的关系
 
@@ -99,7 +101,8 @@ zhongkao-mcp/
 │   ├── checker.py      # 指标全检（词汇 + 篇幅 + 句长）
 │   ├── validator.py    # 题目质量校验
 │   ├── exporter.py     # Word 文档生成
-│   └── blueprint.py    # 题目蓝图随机抽取
+│   ├── blueprint.py    # 题目蓝图随机抽取
+│   └── workflow.py     # 工作流状态机 + 导出门禁
 └── tests/
     └── test_tools.py   # 安装后自测脚本
 ```

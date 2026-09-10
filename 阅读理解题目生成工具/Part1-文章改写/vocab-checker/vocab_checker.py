@@ -1,7 +1,7 @@
 """
 初中英语阅读命题 — 生词检查器
 =================================
-依据：2022版义务教育英语课标二级、三级词汇表（2,795词）
+依据：2022版义务教育英语课标二级、三级词汇表（解析后 3,686 个可匹配词形）
 工具：spaCy 英文词形还原（lemmatization）
 
 功能：
@@ -274,7 +274,7 @@ class VocabChecker:
     # ── 课标前缀（命题规则手册 1.3） ──
     DERIVATIONAL_PREFIXES = ["un", "re", "dis", "im", "in", "ir", "non"]
 
-    _EXTRA_VOCAB: Set[str] = set()  # All extra words are now in the updated vocab md file (2,790 word forms)
+    _EXTRA_VOCAB: Set[str] = set()  # 补充词已全部并入词表 md 文件（解析后共 3,686 个可匹配词形）
 
     def _build_lemma_set(self) -> Set[str]:
         """对词库中每个词运行 spaCy 获取 lemma，扩展为更大匹配集合。"""

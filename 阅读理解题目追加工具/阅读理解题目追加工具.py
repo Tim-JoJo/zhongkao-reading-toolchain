@@ -196,10 +196,17 @@ def _read_lines(prompt):
 def interactive():
     print("== 阅读理解题目追加工具 · 交互模式 ==")
     path = input("docx 文件路径：").strip().strip('"')
+    if not os.path.isfile(path):
+        print("错误：找不到文件:", path)
+        return
     print("题型：1=选词填空 2=7选5 3=语法填空 4=首字母填空 5=阅读问答 6=阅读单选")
+    qtype_map = {1: "选词填空", 2: "7选5", 3: "语法填空",
+                 4: "首字母填空", 5: "阅读问答", 6: "阅读单选"}
     t = input("选择（1-6）：").strip()
-    qtype = {1: "选词填空", 2: "7选5", 3: "语法填空",
-             4: "首字母填空", 5: "阅读问答", 6: "阅读单选"}.get(int(t), "选词填空")
+    if t not in ("1", "2", "3", "4", "5", "6"):
+        print("错误：请输入 1-6 的数字")
+        return
+    qtype = qtype_map[int(t)]
 
     spec = {"type": qtype}
     inst = input("题干指令（无则回车）：").strip()
@@ -286,9 +293,13 @@ def main():
         return
     if len(args) >= 2:
         docx_path, spec_path = args[0], args[1]
-        with open(spec_path, encoding="utf-8") as f:
-            spec = json.load(f)
-        append_from_spec(docx_path, spec)
+        try:
+            with open(spec_path, encoding="utf-8") as f:
+                spec = json.load(f)
+            append_from_spec(docx_path, spec)
+        except (OSError, ValueError) as e:   # 含 json.JSONDecodeError：文件找不到/JSON 坏了都给友好提示
+            print("错误：", e)
+            return
         print("完成：已追加到", docx_path)
         return
     interactive()
