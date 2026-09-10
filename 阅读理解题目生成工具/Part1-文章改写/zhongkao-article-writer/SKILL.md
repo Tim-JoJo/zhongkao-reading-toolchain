@@ -27,7 +27,7 @@ description: Use when the user wants to turn an English news, magazine, science,
 - 词汇降级与句法处理（第 5 步撰写、第 6 步地道性审校）时，读 `references/adaptation-methods.md`（词汇/句法/语篇降级方法 + 地道性门槛 + Humanizer 清单）
 - 材料准入与内容审校（第 1 步准入、第 7 步指标）时，读 `references/curriculum-constraints.md`（课标约束矩阵 + 内容审校依据）
 
-不要把手写词表全部载入上下文（词表口径以 `../vocab-checker/二级、三级词汇表（初中毕业要求）.md` 头部的说明区为准：3,585 条词条，含二级 506 条、常用词组 67 条）。词汇检查优先使用 `mcp__vocab-checker__check_text` 和 `mcp__vocab-checker__check_grade_level`（基于 spaCy 词形还原 + 派生词缀匹配，覆盖率更准确）。
+不要把手写词表全部载入上下文（词表口径以 `../vocab-checker/二级、三级词汇表（初中毕业要求）.md` 头部的说明区为准：3,686 个可匹配词形＝正文 3,570 条词条 + 附录 86 条）。词汇检查优先使用 `mcp__vocab-checker__check_text` 和 `mcp__vocab-checker__check_grade_level`（基于 spaCy 词形还原 + 派生词缀匹配，覆盖率更准确）。
 
 **开始新任务时**，先用 `mcp__zhongkao-mcp__workflow_init(level="...")`（或 `workflow_reset`）清空上一个任务的记录，避免旧状态干扰本次交付（工作流状态写入 `.zhongkao_workflow.json`，供 Part2 的导出门禁使用）；可随时用 `mcp__zhongkao-mcp__workflow_status` 查看各硬性步骤完成情况。`check_passage` 会自动记录指标结果，无需手动登记。
 

@@ -198,7 +198,7 @@ Step 3: 改写
 |------|------|------|
 | **操作层(按需加载)** | | |
 | `references/question-type-library.md` | 4 大题型 + 2 新题型(写作手法/排序)逐类:定义/子模式/题干模板/教材真题例/正确项原则/干扰项手法 | ~19KB |
-| `references/design-logic.md` | 类型分界表 + 通用干扰项手法 + 10 反模式详解 + 整卷配置建议 + 新题型题位 | ~8KB |
+| `references/design-logic.md` | 类型分界表 + 通用干扰项手法 + 11 反模式详解 + 整卷配置建议 + 新题型题位 | ~8KB |
 | **调研层(追溯来源时读取)** | | |
 | `references/research/00-question-corpus.md` | 233 题全量语料 + 6 道新题型真题(按题型分节) | ~44KB |
 | `references/research/01-type-counts.md` | 4 类题量统计与分布规律(两册对比) | ~2KB |
