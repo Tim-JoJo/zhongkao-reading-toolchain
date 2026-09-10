@@ -34,7 +34,7 @@ description: Use when generating reading comprehension multiple-choice questions
 - `option_count`，默认 4，可设 3
 - 文章的指标报告（如有，便于了解可考点和超纲词）
 
-🔴 CHECKPOINT：会话中未指定档位时，**先询问用户选择档位**（`standard | extended`），不得静默默认（遵循项目 CLAUDE.md 第 5 节）。本工具只面向九年级，年级固定为 9，不提供其他年级选项。
+🔴 CHECKPOINT：会话中未指定档位时，**先询问用户选择档位**（`standard | extended`），不得静默默认（遵循项目 CLAUDE.md 第 5 节）。本工具只面向九年级，年级固定为 9，不提供其他年级选项。**已机器化兜底**：档位只认 `workflow_init(level=...)` 的显式登记——未登记时 `check_passage` 会直接拒绝运行、`export_docx` 会被拦（漏问档位的稿子出不来题）。
 
 🔴 STOP：正文缺失时**停止**，说明原因，等用户补齐正文后再继续。
 

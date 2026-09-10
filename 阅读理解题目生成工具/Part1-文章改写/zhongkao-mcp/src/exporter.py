@@ -9,6 +9,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+try:                                    # 以包方式导入（from src.exporter import ...）
+    from .workflow import level_gate_errors
+except ImportError:                     # src/ 直接进 sys.path 时（from exporter import ...）
+    from workflow import level_gate_errors
+
 try:
     from docx import Document
     from docx.shared import Pt, Cm, RGBColor
@@ -344,6 +349,13 @@ def run_export_report_docx(
     """
     if Document is None:
         return "错误：需要安装 python-docx 库 (pip install python-docx)"
+
+    # ── 工作流门禁：档位未由 workflow_init 登记则不得导出报告 ──
+    # （CLAUDE.md 第 5 节：未问用户档位不得静默默认。这条路径过去完全无门禁，
+    #   漏问档位也能出报告 —— 现在与题目导出一致，缺档位即拦。）
+    gate = level_gate_errors()
+    if gate:
+        return "❌ 已拦截导出，缺少前置硬性步骤：\n" + "\n".join(f"  - {e}" for e in gate)
 
     try:
         doc = Document()

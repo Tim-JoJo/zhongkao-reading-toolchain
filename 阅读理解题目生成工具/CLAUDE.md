@@ -51,6 +51,10 @@ Part2 生成题目并导出 Word 时，调用 `mcp__zhongkao-mcp__export_docx`�
 
 本工具只面向**九年级**，年级固定为 9，不提供其他年级选项。
 
+**机器兜底（不只靠 agent 自觉）**：档位只认 `workflow_init(level=...)` 这一次显式登记；`check_passage` 不会拿自己签名里的 `default="standard"` 替用户登记档位（否则默认值会被记成"用户的选择"，门禁永远通过）。未登记档位时：`check_passage` 直接拒绝运行（返回 `❌ 已拦截 check_passage`），Part2 的 `export_docx` 与 Part1 的报告导出（`run_export_report_docx`）都在缺步清单里拦下；登记档位与本次实跑档位不一致（如登记 extended、却按 standard 校指标）同样拦；`workflow_status()` 把「档位登记」列在最前面的待办里。
+
+诚实边界：门禁证明的是「档位被显式登记过」，不是「确实问过用户」——存心绕过仍可直接 `workflow_init(level="standard")`。它挡的是漏问 / 漏登记与档位漂移；**用户没被问过就交付**依然算违规交付。
+
 ## 6. MCP 配置位置（mcp-config-location）
 
 工具链 MCP server 配置在工具包根目录 `.mcp.json`（由工作区根加载）。部署时把 `.mcp.json` 中的 `<工具根目录>` 替换为本工具包的实际绝对路径，并按接收方机器的 python 环境修改 `command`。三个 server：
@@ -94,10 +98,11 @@ Part2 生成题目并导出 Word 时，调用 `mcp__zhongkao-mcp__export_docx`�
 - 未调用 `draw_blueprint`（Part2 硬性步骤，未抽蓝图不得导出）
 - `validate_questions` 未通过（`all_pass != true`，校验不过不得导出）
 - 正文无中文注释，但 `check_passage` 检出超纲词（Part1 交付给 Part2 的应是**带注释版**正文）
+- 档位未登记（`workflow_init(level=...)` 未被调用），或登记档位与 `check_passage` 实跑档位不一致（第 5 节的机器兜底）
 
 被拦截时按提示补做对应步骤，**不要绕过拦截强行导出**。状态管理工具：
 
-- `workflow_init(level)` — 开新任务时初始化（清空旧记录 + 记录档位，level 为 standard / extended）
+- `workflow_init(level)` — 开新任务时初始化（清空旧记录 + 记录档位，level 为 standard / extended）。**档位唯一登记入口**：不登记则 `check_passage` 拒跑、题目导出与报告导出都被拦。
 - `workflow_status()` — 查看已完成 / 待办步骤
 - `workflow_reset()` — 清空状态
 

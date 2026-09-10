@@ -42,7 +42,7 @@ description: Use when the user wants to turn an English news, magazine, science,
 - 目标主题或课程单元（可选）
 - 必须保留的事实、教学词汇或专名（可选）
 
-🔴 CHECKPOINT：会话中未指定档位时，**先询问用户选择档位**（`standard | extended`），不得静默默认（遵循项目 CLAUDE.md 第 5 节）。本工具只面向九年级，年级固定为 9，不提供其他年级选项。
+🔴 CHECKPOINT：会话中未指定档位时，**先询问用户选择档位**（`standard | extended`），不得静默默认（遵循项目 CLAUDE.md 第 5 节）。本工具只面向九年级，年级固定为 9，不提供其他年级选项。**已机器化兜底**：档位只认 `workflow_init(level=...)` 的显式登记——未登记时 `check_passage` 会直接拒绝运行、报告导出会被拦（漏问档位的稿子走不到交付）。
 
 🔴 STOP：正文缺失、事实片段不足以形成完整语篇、材料明显不适合初中生时**停止**，说明原因和所需补充，等用户决定换材/补材后再继续。不要因缺少来源链接而停止；把"来源信息未提供"记入元数据。
 

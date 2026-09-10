@@ -21,6 +21,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+# ── 档位：唯一定义（门禁与 init 都引用它，别再散写字符串）──
+LEVELS = ("standard", "extended")
+
+
 # ── CJK 检测（注释为 `word（翻译）`，正文英文不含汉字）──
 def cjk_count(text: str) -> int:
     """统计文本中的汉字数（CJK 统一表意文字）。"""
@@ -121,8 +125,12 @@ def reset_state() -> dict[str, Any]:
 
 
 def init_state(level: str) -> dict[str, Any] | None:
-    """以指定档位初始化状态；档位非法时返回 None。"""
-    if level not in ("standard", "extended"):
+    """以指定档位初始化状态；档位非法时返回 None。
+
+    这是**唯一**会写入 state["level"] 的入口：档位因此成为一次显式动作，
+    agent 漏问用户就不可能凭空留下档位记录（见 level_gate_errors 的说明）。
+    """
+    if level not in LEVELS:
         return None
     state = _default_state()
     state["level"] = level
@@ -132,7 +140,14 @@ def init_state(level: str) -> dict[str, Any] | None:
 
 # ── 自动记录（由 MCP 工具调用，无需 agent 自觉）──
 
-def record_check_passage(result: dict[str, Any], text: str | None = None) -> None:
+def record_check_passage(result: dict[str, Any], text: str | None = None,
+                         level: str | None = None) -> None:
+    """记录一次指标检查结果（含正文指纹与本次使用的档位）。
+
+    `level` 只是**记录实跑用的档位**，不会写进 state["level"] —— 否则 check_passage
+    签名的 default="standard" 会被记成"用户的档位选择"，档位门禁就形同虚设。
+    两者的差异由 level_gate_errors 负责拦。
+    """
     state = get_state()
     metrics = result.get("metrics", {})
     wc = metrics.get("word_count", {}).get("value", 0)
@@ -143,6 +158,7 @@ def record_check_passage(result: dict[str, Any], text: str | None = None) -> Non
         "word_count": wc,
         "oov_distinct": oov,
         "fingerprint": fp,
+        "level": level,
         "at": _now(),
     }
     if fp:
@@ -183,13 +199,49 @@ def _now() -> str:
 
 # ── 导出门禁 ──
 
+def level_gate_errors(level_used: str | None = None) -> list[str]:
+    """档位登记门禁：未登记档位（或登记档位与本次实跑档位不一致）时的拦截原因。
+
+    背景：CLAUDE.md 第 5 节与两个 SKILL 的 🔴 CHECKPOINT 都要求「会话中未指定档位时
+    必须先问用户选 standard 还是 extended」，但过去这只写给 agent 看 —— check_passage
+    的签名自带 default="standard"，导出侧也没有任何工具读 state["level"]，
+    漏问档位可以一路静默按标准档跑完并交付。
+
+    做法：只有显式调用 workflow_init(level=...) 才会写入档位；未登记即视为"没做过
+    这个决定"，指标检查 / 题目导出 / 报告导出都会被拦。两档阈值不同
+    （平均句长 13–15 / 16–18，P90 24 / 30），跑错档等于用错标尺。
+
+    诚实边界：门禁只能证明"档位被显式登记过"，不能证明"真的问过用户"——
+    存心绕过仍可直接 workflow_init(level="standard")。它挡的是漏问/漏登记，
+    以及"登记 extended、却按 standard 校指标"这类档位漂移。
+    """
+    level = get_state().get("level")
+    if level not in LEVELS:
+        return [
+            "档位未登记：工具链要求先向用户确认档位（standard / extended）再动笔，"
+            "确认后调用 mcp__zhongkao-mcp__workflow_init(level=...) 登记。"
+            "静默按 standard 跑出的指标不算数——两档阈值不同（平均句长 13–15 / 16–18，P90 24 / 30）。"
+        ]
+    if level_used is not None and level_used != level:
+        return [
+            f"档位不一致：工作流登记的是 {level}，本次指标检查用的是 {level_used}。"
+            "两档阈值不同（平均句长 13–15 / 16–18，P90 24 / 30），"
+            "请统一档位后重跑 mcp__zhongkao-mcp__check_passage。"
+        ]
+    return []
+
+
 def export_gate_errors(body: str) -> list[str]:
     """返回导出前应拦截的原因列表；空列表 = 允许导出。
 
     拦截原则：宁可拦住让 agent 补做，也不放行明显缺步的交付。
     """
     state = get_state()
+    cp = state.get("part1", {}).get("check_passage") or {}
     errors: list[str] = []
+
+    # ⓪ 档位未登记 / 与实跑档位不一致（CLAUDE.md 第 5 节：档位必须是一次显式决定）
+    errors += level_gate_errors(cp.get("level"))
 
     # ① 漏抽蓝图（Part2 硬性步骤）
     if not state.get("part2", {}).get("blueprint_drawn"):
@@ -205,8 +257,6 @@ def export_gate_errors(body: str) -> list[str]:
             "validate_questions 未通过(all_pass != true)。请修正后重新调用 "
             "mcp__zhongkao-mcp__validate_questions 校验至 all_pass 为 true 再导出。"
         )
-
-    cp = state.get("part1", {}).get("check_passage") or {}
 
     # ③ 正文忘带中文注释（Part1 交付给 Part2 的正文应为带注释版）
     if cjk_count(body) == 0:
@@ -247,9 +297,17 @@ def status_summary() -> dict[str, Any]:
     done: list[str] = []
     missing: list[str] = []
 
+    # 档位：必须由 workflow_init 显式登记（见 level_gate_errors），放在最前面
+    lvl = state.get("level")
+    if lvl in LEVELS:
+        done.append(f"档位已登记(workflow_init): {lvl}")
+    else:
+        missing.append("档位登记(workflow_init) —— 先问用户 standard / extended")
+
     cp = state.get("part1", {}).get("check_passage")
     if cp:
         done.append(f"Part1 指标检查(check_passage) {'通过(all_pass)' if cp.get('all_pass') else '未通过'}"
+                    f" | 档位 {cp.get('level')}"
                     f" | 词数 {cp.get('word_count')} | 超纲词 {cp.get('oov_distinct')}"
                     f" | 已校验正文版本数 {len(state.get('part1', {}).get('check_fingerprints') or [])}")
     else:

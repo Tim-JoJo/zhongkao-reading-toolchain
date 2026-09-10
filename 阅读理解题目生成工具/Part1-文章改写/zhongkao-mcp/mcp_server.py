@@ -48,6 +48,7 @@ from src.workflow import (
     export_annotation_warning,
     export_gate_errors,
     init_state,
+    level_gate_errors,
     record_blueprint,
     record_check_passage,
     record_docx_exported,
@@ -87,11 +88,19 @@ def check_passage(
             "oov_details": [ 超纲词详情 ],
             "all_pass": bool
         }
+
+    门禁：档位未由 workflow_init 登记时拒绝运行（CLAUDE.md 第 5 节 / SKILL 的
+    🔴 CHECKPOINT）—— 漏问用户的 agent 会在这里被拦下，而不是静默按 standard 跑完。
     """
     if level not in LEVEL_THRESHOLDS:
         return {"error": f"未知档位: {level}，可选 standard / extended"}
     if grade != 9:
         return {"error": f"年级参数无效: {grade}。本工具只面向九年级，grade 必须为 9"}
+
+    level_errors = level_gate_errors(level)
+    if level_errors:
+        return {"error": "❌ 已拦截 check_passage：\n"
+                         + "\n".join(f"  - {e}" for e in level_errors)}
 
     result = run_check_passage(
         text=text,
@@ -101,9 +110,9 @@ def check_passage(
         level_thresholds=LEVEL_THRESHOLDS[level],
         grade_limits=GRADE_LIMITS[grade],
     )
-    # 自动记录指标结果到工作流状态（供 export_docx 门禁用）
+    # 自动记录指标结果到工作流状态（供导出门禁用）；同时记下本次实跑档位
     if "error" not in result:
-        record_check_passage(result, text)
+        record_check_passage(result, text, level)
     return result
 
 
@@ -258,6 +267,9 @@ def workflow_init(level: str) -> dict[str, Any]:
 
     任何 MCP agent 在开始一篇文章的改写/出题前,建议先调用本工具
     reset 状态,避免上一个任务的记录干扰本次导出门禁。
+
+    **档位只认这一处**:必须在问过用户 standard / extended 之后传入(CLAUDE.md 第 5 节)。
+    没有登记档位时,check_passage 会直接拒绝运行,题目 Word 与报告 Word 的导出也会被拦。
 
     Args:
         level: 档位 — "standard"(标准档)或 "extended"(拓展档)

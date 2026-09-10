@@ -20,7 +20,7 @@ pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
 | `test_doc_consistency.py` | 改一处忘另一处 | 词表口径曾在 5 处并存（1601 / 2,795 / 3,585 / 3,686），且废弃口径后来又藏进 `.mcp.json` 与 server instructions（现在 `.md` 与 `.py`/`.json` 双扫描）；荧光图例写"三种色"而表里只有 2 行；"必答 3 问"下实列 5 条；黑名单到 W11 而正文引用只到 W10、reference 只到 W10；弃用工具 `export_article_docx` 又冒回 MCP 工具表；阈值/导出前缀被抄成多份副本 |
 | `test_blueprint_contract.py` | 出题分布静默跑偏 | 文档承诺 Q1 写作手法 30% / Q2 词义 70% / Q4 推断 20% / Q3 抽中 I-08 转 M-03 / 带标题时 Q5 不出 best title / 双 I-08 角点约 0.05% —— 全部按种子扫描核对 |
 | `test_validator_contract.py` | 校验器误报与虚假兜底 | `shows` 内含 `how` 导致 O-02 模板必刷"缺问号"噪音；排序题事件行必须 ①②③④ 分行；**校验器不检查答案分布**（特征化断言，防止将来实现了却忘记改文档） |
-| `test_gate_contract.py` | 漏步导出 / 改文后仍放行 | 未抽蓝图、未过 validate、正文漏注释都要拦；新增**正文内容指纹**：改英文内容后必须重跑 check_passage，只增删中文注释不算改（否则会拦死"注释最后一步加"的合规流程） |
+| `test_gate_contract.py` | 漏步导出 / 改文后仍放行 / 档位漏问 | 未抽蓝图、未过 validate、正文漏注释都要拦；新增**正文内容指纹**：改英文内容后必须重跑 check_passage，只增删中文注释不算改（否则会拦死"注释最后一步加"的合规流程）；新增**档位门禁**：档位只认 `workflow_init(level=...)` 显式登记（check_passage 不得顺手用自己的 default 登记），未登记时 check_passage 拒跑、题目导出与报告导出都拦，登记档位与实跑档位不一致也拦 |
 | `test_export_contract.py` | 文案改动让调用方静默失效 | 曾用 `startswith("文档已保存")` 判断成功再记工作流状态，改一个字就让门禁形同虚设；现在判定集中在 `exporter.is_export_ok`，并校验苹方-简字体与 eastAsia 中文字体 |
 
 ## 已知差异（有意保留，不是 bug）

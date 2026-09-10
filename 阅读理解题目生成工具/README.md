@@ -85,6 +85,7 @@ python -c "import sys; sys.path.insert(0, 'Part1-文章改写/vocab-checker'); i
 ### 关键硬性要求（摘自 CLAUDE.md）
 
 - `check_passage` 必须 `all_pass: true`，其中**正文词数 ≤ 350 为硬门槛**，超限不得交付。
+- **档位先问用户再动笔**：`standard` / `extended` 必须问过用户，并用 `workflow_init(level=...)` 登记（唯一登记入口）。没登记时 `check_passage` 直接拒绝运行、报告与题目导出都被拦；登记档位与实跑档位不一致也拦。
 - `draw_blueprint` 与 `validate_questions` 是出题硬性步骤，不得跳过。
 - 报告/题目 Word 的输出目录**必须先问用户**，不得静默默认。
 - 正文中文注释在导出前最后一步才加入，指标检查用无注释正文。
