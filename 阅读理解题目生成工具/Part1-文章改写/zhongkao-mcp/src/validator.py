@@ -36,7 +36,14 @@ def run_validate_questions(
     questions: list[dict],
     option_count: int = 4,
     article_has_title: bool = False,
+    body: str | None = None,
 ) -> dict[str, Any]:
+    """body 传入时额外校验「题干引号里的词是否还在正文中」。
+
+    这是机器此前查不出的失配：实测 Q 问 "float"，改稿把该词改成 "big soft bag"，
+    题干与正文从此对不上，而老的校验器只看选项格式与答案字母，一律放行。
+    不传 body 时该检查不参与（保持向后兼容）。
+    """
     if option_count not in OPTION_LETTERS:
         return {"error": f"option_count 须为 3 或 4，收到 {option_count}"}
     letters = OPTION_LETTERS[option_count]
@@ -152,6 +159,23 @@ def run_validate_questions(
                     issues.append(f"题{qid} 干扰项 {letters[i]} 含绝对词 '{re.search(pat, opt_clean, re.IGNORECASE).group()}'，可能泄露")
                     leak_ok = False
     checks["absolute_word_leak"] = "pass" if leak_ok else "review_required"
+
+    # ── 检查 6: 题干引用的词是否仍在正文（仅当传入 body）──
+    if body is not None:
+        quoted = []
+        for q in questions:
+            stem = q.get("stem", "") or ""
+            for m in re.finditer(r'"([^"]+)"', stem):
+                t = m.group(1).strip()
+                if t and t not in quoted:
+                    quoted.append(t)
+        low = body.lower()
+        missing = [t for t in quoted if t.lower() not in low]
+        if missing:
+            issues.append(f"题干引用的词在正文中找不到：{missing}（改稿删词后必须回头核对题干与正文）")
+            checks["stem_quote_in_body"] = "review_required"
+        else:
+            checks["stem_quote_in_body"] = "pass"
 
     # ── 汇总 ──
     all_pass = all(v == "pass" for v in checks.values())

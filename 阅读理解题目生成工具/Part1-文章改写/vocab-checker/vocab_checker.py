@@ -358,6 +358,27 @@ class VocabChecker:
 
         return False
 
+    def _is_known_strict(self, token) -> Optional[bool]:
+        """严格口径：只认「原文/lemma 直接命中」，不走派生词缀与激进词干。
+
+        存在的意义是把"覆盖率自证"这件事量化：宽松口径（_is_known）靠后缀/前缀/词干
+        匹配会把一批真超纲词判成课标词，覆盖率因此系统性偏高。两个口径的差额
+        就是"被放宽掉的部分"，由调用方一并输出供人工判断。
+        """
+        if token.tag_ == "POS" or token.pos_ == "PART":
+            return True
+        word = token.text.lower().strip("'\"-.,!?;:()[]{}")
+        if not word or len(word) <= 1:
+            return True
+        if word in self.vocab_lemmas:
+            return True
+        lemma = token.lemma_.lower().strip("'\"-.,!?;:()[]{}")
+        if lemma and lemma in self.vocab_lemmas:
+            return True
+        if token.pos_ == "PROPN":
+            return None
+        return False
+
     def _is_known(self, token) -> Optional[bool]:
         """判断单个 spaCy token 是否为课标词。
 
@@ -439,6 +460,8 @@ class VocabChecker:
                         declared_proper.add(a)
 
         known_count = 0
+        strict_known: Set[str] = set()
+        strict_unknown: Set[str] = set()
         known_set: Set[str] = set()
         unknown_set: Set[str] = set()
         unknown_details: List[dict] = []
@@ -463,10 +486,18 @@ class VocabChecker:
                 continue
 
             status = self._is_known(token)
+            strict = self._is_known_strict(token)
 
             # 用户声明的专名 → 与 spaCy PROPN 同等处理（不计入分母）
             if status is False and (word in declared_proper or word in excluded_tokens):
                 status = None
+            if strict is False and (word in declared_proper or word in excluded_tokens):
+                strict = None
+
+            if strict is True:
+                strict_known.add(word)
+            elif strict is False:
+                strict_unknown.add(word)
 
             if status is True:
                 known_count += 1
@@ -489,6 +520,8 @@ class VocabChecker:
         # 覆盖率基于唯一词元计算（同一生词反复出现只计一次）
         total = len(known_set) + len(unknown_set)
         coverage = len(known_set) / total if total > 0 else 1.0
+        strict_total = len(strict_known) + len(strict_unknown)
+        coverage_strict = len(strict_known) / strict_total if strict_total > 0 else 1.0
 
         return {
             "total_tokens": total,
@@ -497,6 +530,9 @@ class VocabChecker:
             "unknown_tokens": len(unknown_set),
             "proper_nouns": proper_count,
             "coverage": round(coverage, 4),
+            # 严格口径（只认原文/lemma 直接命中）与"被词缀/词干放宽掉的词"
+            "coverage_strict": round(coverage_strict, 4),
+            "relaxed_only_words": sorted(strict_unknown - unknown_set),
             "unknown_words": sorted(unknown_set),
             "unknown_details": unknown_details,
             "proper_noun_words": sorted(proper_set),

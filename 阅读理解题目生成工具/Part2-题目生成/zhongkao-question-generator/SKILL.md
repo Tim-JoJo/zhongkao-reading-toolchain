@@ -127,8 +127,12 @@ mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题
 - **目标词可为单个单词或短语/词组**：单词优先选**长难词**；短语（如 `give up`、`a good deal of` 之类）同样可作猜词考点，划线覆盖整个短语、题干用 words 复数（见「猜词题题干格式」）。
 - **允许选文中已加中文注释的词**：把该词的注释从正文去掉即可作考点（去掉注释后该词不再"给答案"）；去注释的操作不参与生词覆盖率计算。
 - **选词必须通读上下文**：目标词必须能靠**语境线索**（定义/对比/因果/身份提示等）推断出词义；**不得**选靠构词法直接拼出、或纯并列列举中的专业名词（如 `cybersecurity` = cyber+security，属"为出题而出题"）。要通读上下文，挑选真正需要推敲语义的词。
-- **猜词题题干格式**：目标词为单词时用 `What does the underlined word "X" (probably) mean?`，为短语时用 `What do the underlined words "X" (probably) mean?`（words 复数，引号内为短语原文、含空格）；题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加单下划线即定位；不得以 `...` 结尾；validator 有咨询性检查。
-- **正文目标词加下划线**：猜词题的目标词，须在导出文档正文对应位置加**单下划线**标注，与题干中的词呼应。**划线词必须与原文词形逐字一致**：下划线须覆盖原文实际出现的完整单词（如原文 `anchoring` 就划 `anchoring`），不得只截取单词的一部分（如划 `anchoring` 的前半截 `anchor`），也不得将派生词换成原形词；若原文该词位于句首（如 `Primary`），按原文大小写划线即可。**加下划线不得破坏单词间距**：目标词通常需拆成独立 run 并设下划线，此时须保证其与前后单词之间仍有空格分隔，不得粘连（如 `texturewas` 应为 `texture was`）。若目标词原本带中文注释且已去掉注释，尤其注意注释两侧的空格归属——删注释后仍须保留单词间空格。
+- **猜词题题干格式**：目标词为单词时用 `What does the underlined word "X" (probably) mean?`，为短语时用 `What do the underlined words "X" (probably) mean?`（words 复数，引号内为短语原文、含空格）；题干不写段落编号（仅首末段可用 `the first paragraph` / `the last paragraph`）；目标词在正文加单下划线即定位（**由 `export_docx` 自动加，见下条**）；不得以 `...` 结尾；validator 有咨询性检查。
+- **正文目标词加下划线（导出器已自动处理，不用手工划线）**：`export_docx` 从题干引号解析目标词（`extract_underline_targets`）并在正文对应位置加**单下划线**。实现行为按以下约束，人工核稿时用同一标准检查：
+  - **逐字一致**：下划线覆盖正文实际出现的完整单词或短语（原文 `anchoring` 就划 `anchoring`，不得只划前半截 `anchor`；短语如 `feed back on` 整体划线），也不得把派生词换回原形词；句首大写（如 `Primary`）按原文划线即可。
+  - **大小写可不同、只划首次出现**（正文与题干的词形一致、大小写可不同）。
+  - **不破坏词距**：目标词拆成独立 run 时前后空格保留（`texturewas` 应为 `texture was`）；目标词原本带中文注释且已去掉注释时，尤其注意注释两侧的空格归属。
+  - **目标词必须仍在正文中**：改稿删词会造成题干失配，`validate_questions(..., body="正文")` 会报 `stem_quote_in_body`。
 
 #### 推断题范围规则（I-01 隐含信息）
 
@@ -202,7 +206,8 @@ mcp__zhongkao-mcp__draw_blueprint(article_has_title=true)   # 文章已有标题
 mcp__zhongkao-mcp__validate_questions(
     questions=[{"id": 1, "stem": "...", "options": [...], "answer": "D", "type": "detail"}, ...],
     option_count=4,
-    article_has_title=true   # 文章自带标题时必传（与第 3 步 draw_blueprint 同名参数同源）
+    article_has_title=true,  # 文章自带标题时必传（与第 3 步 draw_blueprint 同名参数同源）
+    body="正文（带中文注释版）"   # 建议必传：额外校验题干引号里的词是否仍在正文中
 )
 ```
 
@@ -216,6 +221,10 @@ mcp__zhongkao-mcp__validate_questions(
 | 题型覆盖 | 每篇必须覆盖 vocabulary_or_detail / inference / main_idea，外加 writing_technique 或 detail（Q1 二选一）、ordering 或 inference（Q4 二选一）。**文章自带标题时例外**：Q5 已改出推断题，main_idea 不作硬性覆盖，校验时必须传 `article_has_title=true`（与第 3 步 `draw_blueprint` 同名参数同源） | 通过/不通过 |
 | 选项长度均衡 | 最长选项 ≤ 最短 × 2（词数）且 ≤ 30 字符差。validator 用双条件（超 2 倍 **且** 差 >30 字符）判定，排序题的序列选项（如 `②③①④`）长度天然接近，实际很少触发；若触发需按通用标准调整。序列选项只需保证所有选项同为完整序列（无缺标号/错序） | 通过/不通过 |
 | 绝对词泄露 | `all / never / always / only / none / every / no one` 出现在干扰项中 | 标记预警 |
+| 题干引文失配 | 传 `body` 时校验：题干引号里的词是否仍在正文中（改稿删词曾长期查不出） | 通过/不通过 |
+
+> **答案分布没有机器兜底**：validator 不检查选项字母分布（只查字母是否在有效范围内），必须靠第 5 步「答案分布倾斜的修正步骤」自查。
+> **正文内容指纹**：`export_docx` 会比对当前正文与 `check_passage` 时那一版（只增删中文注释不影响）；改过英文正文就必须重跑 `check_passage`，否则导出被拦。
 
 如有 `fail` 或 `review_required` 项，修正后重新校验，直至 `all_pass` 为 true。
 

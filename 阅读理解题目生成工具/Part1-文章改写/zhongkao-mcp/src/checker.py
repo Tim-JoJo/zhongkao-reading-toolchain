@@ -265,9 +265,20 @@ def run_check_passage(
         and grade_check["all_pass"]
     )
 
+    # 覆盖率口径提示：不参与 pass/fail，只把"自证幅度"摆出来
+    coverage_range = {
+        "lenient": round(vocab_result["coverage"], 4),
+        "strict": round(vocab_result.get("coverage_strict", 0.0), 4),
+        "relaxed_by_affix_or_stem": (vocab_result.get("relaxed_only_words") or [])[:20],
+        "note": ("lenient 走「原文/lemma → 派生词缀 → 激进词干」三层匹配（当前用于判定）；"
+                 "strict 只认原文与 lemma 直接命中。差额越大，说明越多词是靠词缀/词干放宽才判为课标词，"
+                 "覆盖率越偏乐观。两者差距明显时建议人工抽查 relaxed_by_affix_or_stem。"),
+    }
+
     return {
         "level": level,
         "metrics": metrics,
+        "coverage_range": coverage_range,
         "grade_check": grade_check,
         "oov_details": oov_details,
         "proper_noun_candidates": vocab_result.get("proper_noun_words", []),

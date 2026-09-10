@@ -11,7 +11,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+try:                                        # mcp <2：FastMCP
+    from mcp.server.fastmcp import FastMCP
+except ModuleNotFoundError:                 # mcp >=2：同一能力改名为 MCPServer
+    from mcp.server.mcpserver import MCPServer as FastMCP   # type: ignore
 
 # ── 初始化 MCP 服务器 ──
 mcp = FastMCP(

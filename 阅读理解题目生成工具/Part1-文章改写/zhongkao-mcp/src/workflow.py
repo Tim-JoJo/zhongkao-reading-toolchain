@@ -51,7 +51,8 @@ def _default_state() -> dict[str, Any]:
     return {
         "level": None,
         "part1": {
-            "check_passage": None,   # {all_pass, word_count, oov_distinct, fingerprint, at}
+            "check_passage": None,   # 最近一次 {all_pass, word_count, oov_distinct, fingerprint, at}
+        "check_fingerprints": [],  # 已通过校验的正文指纹清单（多 agent 共用工作目录时互不覆盖）
             "report_exported": False,
         },
         "part2": {
@@ -136,13 +137,19 @@ def record_check_passage(result: dict[str, Any], text: str | None = None) -> Non
     metrics = result.get("metrics", {})
     wc = metrics.get("word_count", {}).get("value", 0)
     oov = len(metrics.get("oov_distinct", {}).get("value", []))
+    fp = content_fingerprint(text) if text is not None else None
     state["part1"]["check_passage"] = {
         "all_pass": bool(result.get("all_pass")),
         "word_count": wc,
         "oov_distinct": oov,
-        "fingerprint": content_fingerprint(text) if text is not None else None,
+        "fingerprint": fp,
         "at": _now(),
     }
+    if fp:
+        # 保留清单而不是单值：同一工作目录常有多个 agent/多篇稿并行，
+        # 单值会被互相覆盖，导致「刚校验过的正文」被另一个 agent 的手次记录顶掉。
+        fps = [f for f in state["part1"].get("check_fingerprints", []) if f != fp]
+        state["part1"]["check_fingerprints"] = ([fp] + fps)[:20]
     save_state(state)
 
 
@@ -210,10 +217,14 @@ def export_gate_errors(body: str) -> list[str]:
                 "请为超纲词添加中文注释(带注释版正文)后再导出；不要导出无注释的检查版正文。"
             )
 
-    # ④ 正文在校验之后被改过（校验只覆盖当时那一版正文）
-    if cp.get("fingerprint") and cp["fingerprint"] != content_fingerprint(body):
+    # ④ 这一版正文从未通过 check_passage（改文后仍想用旧校验放行）
+    fps = list(state.get("part1", {}).get("check_fingerprints") or [])
+    legacy = cp.get("fingerprint")
+    if legacy and legacy not in fps:      # 兼容旧状态文件里的单值字段
+        fps.append(legacy)
+    if fps and content_fingerprint(body) not in fps:
         errors.append(
-            "正文在 check_passage 之后被改动过（内容指纹不一致）。指标校验只对当时那一版正文有效，"
+            "这一版正文没有 check_passage 记录（内容指纹不在已校验清单里）。指标校验只对当时那一版正文有效，"
             "请对当前正文重跑 mcp__zhongkao-mcp__check_passage（只增删中文注释不会触发本条）。"
         )
 
@@ -239,7 +250,8 @@ def status_summary() -> dict[str, Any]:
     cp = state.get("part1", {}).get("check_passage")
     if cp:
         done.append(f"Part1 指标检查(check_passage) {'通过(all_pass)' if cp.get('all_pass') else '未通过'}"
-                    f" | 词数 {cp.get('word_count')} | 超纲词 {cp.get('oov_distinct')}")
+                    f" | 词数 {cp.get('word_count')} | 超纲词 {cp.get('oov_distinct')}"
+                    f" | 已校验正文版本数 {len(state.get('part1', {}).get('check_fingerprints') or [])}")
     else:
         missing.append("Part1 指标检查(check_passage)")
 

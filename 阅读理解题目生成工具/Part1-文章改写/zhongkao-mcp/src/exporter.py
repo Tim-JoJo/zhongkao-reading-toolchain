@@ -50,6 +50,54 @@ def _set_run_font(run, size: int = 12, bold: bool = False, italic: bool = False,
     run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia)
 
 
+# 猜词题目标词：从题干引号里取回，再在正文对应位置加单下划线
+# 真题句式：What does the underlined word "X" (probably) mean?
+#           What do the underlined words "a b" (probably) mean?（短语含空格）
+VOCAB_TARGET_RE = re.compile(r'underlined words?\s*"([^"]+)"', re.IGNORECASE)
+
+
+def extract_underline_targets(questions: list[dict]) -> list[str]:
+    """取回需要划线的猜词目标词（与题干引号内逐字一致，按题干顺序去重）。"""
+    out: list[str] = []
+    for q in questions or []:
+        for m in VOCAB_TARGET_RE.finditer(q.get("stem", "") or ""):
+            t = m.group(1).strip()
+            if t and t not in out:
+                out.append(t)
+    return out
+
+
+def _write_runs_with_underline(p, text: str, target: str | None) -> bool:
+    """把 text 写成段落 run；命中 target 时只给目标词加单下划线并原样保留前后空格。
+
+    返回是否真的划到了。划线只用 find 做逐字匹配（大小写不敏感退化），
+    不做词形还原——SKILL 要求「划线词必须与原文词形逐字一致」。
+    """
+    if not target:
+        r = p.add_run(text)
+        _set_run_font(r)
+        return False
+    idx, hit = text.find(target), target
+    if idx < 0:                                  # 大小写退化匹配（目标词可能在句首大写）
+        low = text.lower().find(target.lower())
+        if low < 0:
+            r = p.add_run(text)                  # 正文里没有该词：原样输出，交给 validator 报失配
+            _set_run_font(r)
+            return False
+        idx, hit = low, text[low:low + len(target)]
+    if idx < 0:
+        r = p.add_run(text)
+        _set_run_font(r)
+        return False
+    for seg, underline in ((text[:idx], False), (hit, True), (text[idx + len(hit):], False)):
+        if not seg:
+            continue
+        r = p.add_run(seg)
+        _set_run_font(r)
+        r.font.underline = underline
+    return True
+
+
 # 排序题事件标号：①②③④（用苹方-简字体渲染）
 ORDERING_MARK_RE = re.compile(r"^([①②③④])([\.\s].*)$")
 
@@ -141,15 +189,22 @@ def run_export_docx(
         run = pt_para.add_run(title)
         _set_run_font(run, size=20, bold=True)
 
-        # ── 正文（12pt，1.5 倍行距） ──
+        # ── 正文（12pt，1.5 倍行距）；猜词题目标词加单下划线 ──
+        targets = extract_underline_targets(questions)
+        done: set[str] = set()
         for para_text in body.split("\n\n"):
-            p = doc.add_paragraph(para_text.strip())
+            para_text = para_text.strip()
+            p = doc.add_paragraph()
             p.paragraph_format.first_line_indent = Cm(0.75)
             p.paragraph_format.space_after = Pt(4)
             p.paragraph_format.line_spacing = 1.5
-            for r in p.runs:
-                r.font.name = "Arial"
-                r._element.rPr.rFonts.set(qn("w:eastAsia"), "微软雅黑")
+            # 同一目标词只划首次出现；已划过的段落不再重复
+            tgt = next((t for t in targets if t not in done and t in para_text), None)
+            if tgt is None:
+                tgt = next((t for t in targets if t not in done
+                            and t.lower() in para_text.lower()), None)
+            if _write_runs_with_underline(p, para_text, tgt) and tgt:
+                done.add(tgt)
 
         doc.add_paragraph()
 

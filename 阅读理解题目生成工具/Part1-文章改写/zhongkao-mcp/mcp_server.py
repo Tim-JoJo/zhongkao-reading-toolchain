@@ -17,7 +17,10 @@
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+try:                                        # mcp <2：FastMCP
+    from mcp.server.fastmcp import FastMCP
+except ModuleNotFoundError:                 # mcp >=2：同一能力改名为 MCPServer
+    from mcp.server.mcpserver import MCPServer as FastMCP   # type: ignore
 
 # ── 初始化 MCP 服务器 ──
 mcp = FastMCP(
@@ -128,6 +131,7 @@ def validate_questions(
     questions: list[dict],
     option_count: int = 4,
     article_has_title: bool = False,
+    body: str | None = None,
 ) -> dict[str, Any]:
     """题目质量校验：检查选项格式、答案唯一性、题目类型覆盖等。
 
@@ -136,6 +140,8 @@ def validate_questions(
         option_count: 每题应有选项数（3 或 4）
         article_has_title: 文章是否自带标题。带标题文章 Q5 按硬性规则改出推断题（不出
             best title），main_idea 不作硬性覆盖要求；不传则维持原行为（要求覆盖 main_idea）
+        body: 正文文本（可选）。传入时额外校验「题干引号里的词是否还在正文中」——
+            改稿删词后题干失配曾长期查不出来，建议出题后一并传入
 
     Returns:
         dict: {
@@ -146,7 +152,7 @@ def validate_questions(
             "all_pass": bool
         }
     """
-    result = run_validate_questions(questions, option_count, article_has_title)
+    result = run_validate_questions(questions, option_count, article_has_title, body)
     # 自动记录校验结果到工作流状态（供 export_docx 门禁用）
     if "error" not in result:
         record_validate(result)
