@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# 提交前跑「容易遗漏/出错」点的自动校验（跳过不需要的 spaCy 部分）。
+# 启用：git config core.hooksPath .githooks
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+PY="${HOOK_PYTHON:-}"
+if [ -z "$PY" ] && [ -x /tmp/zk-venv/bin/python ]; then PY=/tmp/zk-venv/bin/python; fi
+if [ -z "$PY" ]; then PY="$(command -v python3 || true)"; fi
+if [ -z "$PY" ]; then echo "⚠️  找不到 python，跳过 hook"; exit 0; fi
+if ! "$PY" -c "import pytest" 2>/dev/null; then
+  echo "⚠️  当前解释器（$PY）没有 pytest，跳过 hook。"
+  echo "   想启用：$PY -m pip install pytest python-docx"
+  exit 0
+fi
+
+if ! "$PY" -m pytest hook -q --no-header -p no:cacheprovider; then
+  cat <<'MSG'
+
+❌ hook 未通过 —— 上面每一条都对应一个曾经出过的事故（见 hook/README.md）。
+   修复后再提交；确有正当理由要跳过时用 git commit --no-verify，并在提交信息里说明。
+MSG
+  exit 1
+fi
+echo "✅ hook 全部通过"
