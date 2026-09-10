@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/banner.svg" alt="中考英语阅读 AI 命题工作链 banner" width="100%">
+
 # 中考英语阅读 AI 命题工作链
 
 **把「文章改写 → 五题命题 → 二卷配套 → 排版交付」做成一个人就能跑完的 AI agent 工作链。**
