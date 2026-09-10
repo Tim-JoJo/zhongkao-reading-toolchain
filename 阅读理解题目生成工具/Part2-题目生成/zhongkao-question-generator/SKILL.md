@@ -292,7 +292,7 @@ mcp__zhongkao-mcp__export_docx(
 3. `stem` 字段**不带数字标号**（导出器自动编号，避免 `1. 1.` 重复）；排序题（Q4）stem 内先用 ①/②/③/④ 列出事件（每事件一行）。
 4. 选项字母和标点正确（A. / B. / C. / D.），题干结尾有问号。**排序题（Q4）例外**：stem 以 ①/②/③/④ 事件清单结尾，在清单前用一句问句引出（如 `Which is the correct order of the following events?`），事件清单本身不以问号结尾。validator 对 `type == "ordering"` 的题只检查 ①/② 事件清单是否齐全，不因清单结尾缺问号报错。
 
-> **已知误报（不必处理）**：validator 的缺问号检查用 `"how" in stem.lower()` 做子串判断，题干里出现 `shows`（内含 `how`）或 `why` 时会误报「题干可能缺少问号」——O-02 模板 `Which of the following shows the correct order…?` 必中。该提示不影响 `all_pass`，排序题按本节格式（清单前一句问句 + 事件清单结尾）即可，**不要为消除它去改题干或给事件清单强加问号**。
+> **问号提示的由来（已于 2026-09 修复）**：缺问号检查历史上用 `"how" in stem.lower()` 做子串判断，`shows` 内含 `how`，导致 O-02 模板 `Which of the following shows the correct order…?` 必然误报「题干可能缺少问号」。现已改为词边界匹配 `\b(how|why)\b`（`hook/test_validator_contract.py` 锁住该行为）。排序题按本节格式（清单前一句问句 + 事件清单结尾）即可，不必为提示改动题干。
 5. Word 文档末尾包含 Answer Key 和答案解析（`explanations` 参数：第 1 条为导语、其余与题目一一对应）。**解析文本不带数字标号**（同 stem 约定：导语与每条详解只写内容本身，如 `本文是一篇说明文，……`、`第X段……可知……`，不带 `1.` 前缀；导出器识别导语后独立成段、不加编号、后接空行，逐题详解从 `1.` 开始编号）。
 
 ## 交付门槛

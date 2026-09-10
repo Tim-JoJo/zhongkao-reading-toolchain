@@ -24,6 +24,23 @@ except ImportError:
     Document = None
 
 
+# ── 导出成功的返回前缀：唯一来源 ──
+# 不要在别的文件里硬编码这些字符串（曾经 mcp_server 用 startswith("文档已保存") 做记账，
+# 改一个字文案就会静默让工作流状态失效）。判定统一走 is_export_ok / is_report_ok。
+EXPORT_OK_PREFIX = "文档已保存至："
+REPORT_OK_PREFIX = "报告已保存至："
+
+
+def is_export_ok(result: object) -> bool:
+    """run_export_docx 的返回是否表示成功。"""
+    return isinstance(result, str) and result.startswith(EXPORT_OK_PREFIX)
+
+
+def is_report_ok(result: object) -> bool:
+    """run_export_report_docx 的返回是否表示成功。"""
+    return isinstance(result, str) and result.startswith(REPORT_OK_PREFIX)
+
+
 def _set_run_font(run, size: int = 12, bold: bool = False, italic: bool = False, east_asia: str = "微软雅黑"):
     """统一设置 run 的字体和大小。east_asia 为中文/全角字符字体。"""
     run.font.name = "Arial"
@@ -250,7 +267,7 @@ def run_export_docx(
         # ── 保存 ──
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         doc.save(output_path)
-        return f"文档已保存至：{output_path}"
+        return f"{EXPORT_OK_PREFIX}{output_path}"
 
     except Exception as e:
         return f"导出失败：{e}"
@@ -347,7 +364,7 @@ def run_export_report_docx(
         out = Path(output_path or str(Path(DEFAULT_REPORT_DIR) / f"{title}.docx"))
         out.parent.mkdir(parents=True, exist_ok=True)
         doc.save(str(out))
-        return f"报告已保存至：{out}"
+        return f"{REPORT_OK_PREFIX}{out}"
 
     except Exception as e:
         return f"导出失败：{e}"
@@ -403,7 +420,7 @@ def run_export_article_docx(
         # ── 保存 ──
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         doc.save(output_path)
-        return f"文档已保存至：{output_path}"
+        return f"{EXPORT_OK_PREFIX}{output_path}"
 
     except Exception as e:
         return f"导出失败：{e}"

@@ -13,8 +13,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -25,11 +27,31 @@ def cjk_count(text: str) -> int:
     return sum(1 for ch in text if "一" <= ch <= "鿿")
 
 
+# ── 正文内容指纹：把「校验过的那一版正文」钉在状态里 ──
+# 历史缺口：状态只记 all_pass 的布尔值，不记正文内容 —— 校验完 A 稿、改成 B 稿导出，
+# 门禁照样放行。指纹只对「英文内容」敏感：SKILL 规定的流程是先用无注释正文跑
+# check_passage、导出前最后一步才加中文注释，若直接哈希原文，加注释就会把合规交付拦死。
+_SKELETON_RE = re.compile(r"[^a-z0-9]+")
+
+
+def content_fingerprint(body: str) -> str:
+    """英文内容指纹：只保留 a-z0-9（小写）组成的骨架，再取 sha256 前 16 位。
+
+    为什么用"骨架"而不是"去空白"：中文注释是紧贴单词写的（如 `urgency（紧迫）and`），
+    任何"把汉字替换成空格/删掉"的做法都会改变标点邻接或词边界，导致"只加了注释"
+    也被判成改文，把 SKILL 规定的合规流程（无注释正文先过 check_passage、
+    导出前最后一步才加注释）拦死。只留字母数字后：加/删注释、全角标点、空白都不影响指纹，
+    而任何改写英文正文的动作都会改变骨架，必被拦住。
+    """
+    skeleton = _SKELETON_RE.sub("", (body or "").lower())
+    return hashlib.sha256(skeleton.encode("utf-8")).hexdigest()[:16]
+
+
 def _default_state() -> dict[str, Any]:
     return {
         "level": None,
         "part1": {
-            "check_passage": None,   # {all_pass, word_count, oov_distinct, at}
+            "check_passage": None,   # {all_pass, word_count, oov_distinct, fingerprint, at}
             "report_exported": False,
         },
         "part2": {
@@ -109,7 +131,7 @@ def init_state(level: str) -> dict[str, Any] | None:
 
 # ── 自动记录（由 MCP 工具调用，无需 agent 自觉）──
 
-def record_check_passage(result: dict[str, Any]) -> None:
+def record_check_passage(result: dict[str, Any], text: str | None = None) -> None:
     state = get_state()
     metrics = result.get("metrics", {})
     wc = metrics.get("word_count", {}).get("value", 0)
@@ -118,6 +140,7 @@ def record_check_passage(result: dict[str, Any]) -> None:
         "all_pass": bool(result.get("all_pass")),
         "word_count": wc,
         "oov_distinct": oov,
+        "fingerprint": content_fingerprint(text) if text is not None else None,
         "at": _now(),
     }
     save_state(state)
@@ -176,15 +199,23 @@ def export_gate_errors(body: str) -> list[str]:
             "mcp__zhongkao-mcp__validate_questions 校验至 all_pass 为 true 再导出。"
         )
 
+    cp = state.get("part1", {}).get("check_passage") or {}
+
     # ③ 正文忘带中文注释（Part1 交付给 Part2 的正文应为带注释版）
     if cjk_count(body) == 0:
-        cp = state.get("part1", {}).get("check_passage") or {}
         oov = cp.get("oov_distinct", 0)
         if oov > 0:
             errors.append(
                 f"正文未包含中文注释(检测到 0 个汉字)，但 check_passage 检出 {oov} 个超纲词。"
                 "请为超纲词添加中文注释(带注释版正文)后再导出；不要导出无注释的检查版正文。"
             )
+
+    # ④ 正文在校验之后被改过（校验只覆盖当时那一版正文）
+    if cp.get("fingerprint") and cp["fingerprint"] != content_fingerprint(body):
+        errors.append(
+            "正文在 check_passage 之后被改动过（内容指纹不一致）。指标校验只对当时那一版正文有效，"
+            "请对当前正文重跑 mcp__zhongkao-mcp__check_passage（只增删中文注释不会触发本条）。"
+        )
 
     return errors
 

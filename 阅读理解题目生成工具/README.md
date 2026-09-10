@@ -16,7 +16,7 @@
 │   ├── .mcp.json                    ← Part1 内部相对 MCP 配置（备用）
 │   ├── zhongkao-article-writer/     ← Skill ①文章写作（SKILL.md + references/）
 │   ├── zhongkao-mcp/                ← MCP server：指标检查 + 题目校验 + Word 导出（mcp_server.py + src/）
-│   └── vocab-checker/               ← MCP server：生词/覆盖率检查（基于 2022 课标 2,795 词表）
+│   └── vocab-checker/               ← MCP server：生词/覆盖率检查（基于课标词表 3,585 词条）
 ├── Part2-题目生成/
 │   ├── zhongkao-question-generator/ ← Skill ②题目生成（SKILL.md + references/）
 │   └── rc-question-writing/         ← Skill ③阅读选择题题型参考（SKILL.md + references/）
