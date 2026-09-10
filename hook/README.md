@@ -36,8 +36,18 @@ pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
 | 词表 3,585 vs 解析器 3,686 | 逐项实测后统一为「3,686 个可匹配词形 = 正文 3,570 条词条（含二级 505 条）+ 附录 86 条」；旧数字（1601/2,795/3,585）列入禁止清单由 hook 拦 |
 
 
+## 2026-09-10 补齐的四项（原"已知缺口"清单）
+
+| 原缺口 | 现在的做法 | 由谁兜底 |
+|---|---|---|
+| 猜词题目标词下划线未实现 | `exporter.extract_underline_targets()` 从题干引号解析目标词，正文对应位置自动加单下划线（逐字匹配、只划首现、不破坏词距） | `test_export_contract` 逐段比对 + 只允许一处下划线 |
+| 题干引用的词被改稿删掉后查不出 | `validate_questions(..., body=正文)` 新增 `stem_quote_in_body` 检查；不传 body 时行为不变（向后兼容） | `test_validator_contract` |
+| 指纹状态被同目录其他 agent 覆盖 | 状态里存**已校验指纹清单**（`check_fingerprints`，上限 20）而不是单值；任一 agent 校验过的正文都仍有效 | `test_gate_contract::test_fingerprint_list_survives_multiple_agents` |
+| 覆盖率是自证的 | `coverage_range` 同时给出 lenient / strict 两个口径与「靠词缀/词干放宽掉的词」清单（不参与 pass/fail）。实测样例：`actively` 属放宽项 → lenient 0.80 / strict 0.60 | 输出可见；仍不设硬门槛（刻意取舍） |
+| mcp 2.x 下 server 起不来 | 两侧加 `try: FastMCP except: MCPServer as FastMCP` 兼容层；requirements 保留 `mcp>=1.0,<2` 作确定性保险 | `test_doc_consistency::test_mcp_version_compat_layer` |
+
 ## 还没挂钩的已知缺口（诚实清单）
 
-- **猜词题目标词下划线未实现**：SKILL 要求正文目标词加单下划线，但 `exporter.py` 没有对应逻辑（纯源码导出路径下无法自动加），目前靠人工。
-- **门禁的跨进程信任边界**：内容指纹存在工作目录的 JSON 里，同一工作目录被不同 agent 共享时会互相覆盖（文档已注明需 `workflow_init`）。
-- **覆盖率是自证的**：`_agg_stem` 激进词干匹配会系统性放宽判定，覆盖率偏高；这是刻意的工程取舍，不设 hook。
+- **mcp 2.x 兼容层本机未实测**：2.x 的本机安装因网络（拉 `httpx2`）失败，兼容层按官方迁移说明写、1.x 已实测；2.x 实测通过后可去掉 requirements 里的 `<2`。
+- **覆盖率仍不设硬门槛**：lenient/strict 已可见，但判定仍用 lenient（刻意取舍：宁可漏判也不误判课标词）。
+- **门禁的信任边界**：指纹清单解决了同目录互相覆盖，但状态文件本身仍可被手改；它防的是"漏步"与"改文后忘校验"，不是防人。

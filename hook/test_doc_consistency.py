@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import re
+import sys
 
 import pytest
 
@@ -138,6 +139,21 @@ def test_mcp_tool_set():
 
 
 # ── 7. 阈值与导出前缀：单一来源 ──
+def test_threshold_dump_is_stable():
+    """hook/dump_thresholds.py 的输出必须与 thresholds.py 一致（否则文档镜像会漂移）。"""
+    sys.path.insert(0, str(REPO / "hook"))
+    from dump_thresholds import canonical_block
+    from thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS
+
+    block = canonical_block()
+    for key in ("word_count", "avg_sentence", "p90", "coverage", "oov_distinct", "proper_band"):
+        assert key in block
+    assert str(LEVEL_THRESHOLDS["standard"]["word_count"]) in block
+    assert str(LEVEL_THRESHOLDS["extended"]["average_sentence_length"]) in block
+    assert f"max_proper={GRADE_LIMITS[9]['max_proper']}" in block
+    assert "999=不设限制" in block, "专名不设限制的事实必须在镜像里显式写出，避免被读成 999 个上限"
+
+
 def test_threshold_single_source():
     assert SHARED_THRESHOLDS.exists(), "共用阈值应在 Part1-文章改写/thresholds.py（两个 server 的共同上级）"
     shared = SHARED_THRESHOLDS.read_text(encoding="utf-8")
@@ -157,23 +173,70 @@ def test_threshold_single_source():
         "vocab-checker 又自行限制了专名数量（与 SKILL 冲突）"
 
 
-def test_mcp_pin_matches_code_api():
-    """代码用的是 mcp v1 的 FastMCP ⇒ requirements 必须钉 <2。
+def test_mcp_version_compat_layer():
+    """两个 MCP server 必须同时适配 mcp 1.x(FastMCP) 与 2.x(MCPServer)。
 
-    背景：mcp 2.x 把 FastMCP 改名为 MCPServer（from mcp.server.mcpserver import MCPServer），
-    而 `mcp>=1.0` 这条宽松约束会让**全新安装**解析到 2.x，MCP server 直接 import 失败。
-    实测：venv 装到 mcp 2.2.0 时 `from mcp.server.fastmcp import FastMCP` 抛 ModuleNotFoundError。
-    若将来迁移到 2.x，请同时删除本 hook 与 requirements 里的 <2 约束。
+    背景：2.x 把 FastMCP 改名为 MCPServer（from mcp.server.mcpserver import MCPServer）。
+    曾在 venv 里实测：装到 mcp 2.2.0 时 `from mcp.server.fastmcp import FastMCP` 抛
+    ModuleNotFoundError，而 requirements 写的是 `mcp>=1.0` —— 全新安装必然解析到 2.x，server 起不来。
+    现在两侧都带 try/except 兼容层，且**两端均已实测**：
+      · mcp 1.30.0（主 venv）：两个 server 加载 OK、整套 hook 50 passed
+      · mcp 2.2.0（/tmp/zk-venv2，经代理安装）：两个 server 加载 OK（FastMCP 解析为 MCPServer）、整套 hook 49 passed
+    因此 requirements 已放开为 `mcp>=1.10`，不再靠钉版本躲开。仍未实测的是 2.x 下的 stdio `run()`
+    实际起服务（hook 只覆盖到模块加载、@tool 注册与底层函数行为）。
     """
-    users = [p for p in REPO.rglob("*.py")
-             if "hook" not in p.parts and "mcp.server.fastmcp" in p.read_text(encoding="utf-8")]
-    assert users, "预期仍有模块使用 mcp v1 的 FastMCP（已迁移到 2.x？请同步删掉本 hook）"
-    bad = []
-    for p in REPO.rglob("requirements.txt"):
-        txt = p.read_text(encoding="utf-8")
-        if any(l.strip().startswith("mcp") for l in txt.splitlines()) and "<2" not in txt:
-            bad.append(str(p.relative_to(REPO)))
-    assert not bad, f"这些 requirements 未把 mcp 钉在 <2，新装环境会拉到 2.x 导致 FastMCP 不存在：{bad}"
+    for f in (MCP / "mcp_server.py", VOCAB_SRV):
+        t = f.read_text(encoding="utf-8")
+        assert "from mcp.server.fastmcp import FastMCP" in t, f"{f.name} 丢了 mcp 1.x 导入"
+        assert "from mcp.server.mcpserver import MCPServer as FastMCP" in t, (
+            f"{f.name} 缺 mcp 2.x 兼容分支 —— 2.x 环境下 server 会起不来")
+
+
+def test_mcp_shim_falls_back_to_mcpserver(tmp_path):
+    """用桩模块验证兼容层的 2.x 分支确实会生效（不是写了个永远走不到的死分支）。
+
+    做法：造一个只有 `mcp.server.mcpserver.MCPServer`、没有 `mcp.server.fastmcp` 的假 mcp 包
+    （正是 2.x 的样子），再 import 本仓库的 mcp_server.py，断言它绑定到 MCPServer。
+    """
+    pytest.importorskip("spacy", reason="加载 zhongkao-mcp 需要 spacy（contracts job 无 spacy）")
+    import subprocess
+    import sys
+    import textwrap
+
+    fake_root = tmp_path / "fakepkg"          # sys.path 要指到「包目录的父目录」
+    stub = fake_root / "mcp"
+    (stub / "server").mkdir(parents=True)
+    (stub / "__init__.py").write_text("")
+    (stub / "server" / "__init__.py").write_text("")
+    (stub / "server" / "mcpserver.py").write_text(
+        "class MCPServer:\n"
+        "    def __init__(self, name, instructions=None):\n"
+        "        self.name, self.instructions = name, instructions\n"
+        "    def tool(self):\n"
+        "        def deco(fn):\n            return fn\n"
+        "        return deco\n"
+        "    def run(self):\n        return None\n")
+
+    code = textwrap.dedent(f"""
+        import importlib.util, sys
+        sys.path.insert(0, {str(fake_root)!r})       # 假 mcp 包（只有 mcpserver，没有 fastmcp）
+        sys.path.insert(0, {str(MCP.parent / "vocab-checker")!r})
+        sys.path.insert(0, {str(MCP)!r})
+        sys.path.insert(0, {str(MCP / "src")!r})
+        try:
+            from mcp.server.fastmcp import FastMCP
+            raise SystemExit("桩环境里不该有 fastmcp")
+        except ModuleNotFoundError:
+            pass
+        spec = importlib.util.spec_from_file_location("zk_shim", {str(MCP / "mcp_server.py")!r})
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        from mcp.server.mcpserver import MCPServer
+        assert mod.FastMCP is MCPServer, "兼容层没有回退到 MCPServer"
+        print("SHIM_FALLBACK_OK")
+    """)
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300)
+    assert "SHIM_FALLBACK_OK" in out.stdout, (out.stdout + out.stderr)[-1500:]
 
 
 def test_export_prefix_single_source():

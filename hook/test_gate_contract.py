@@ -85,6 +85,23 @@ def test_fingerprint_ignores_cjk_punctuation_and_whitespace():
         "紧贴式注释不得改变指纹，否则合规流程会被拦死"
 
 
+def test_fingerprint_list_survives_multiple_agents(state):
+    """同一工作目录里多个 agent / 多篇稿并行时，后一次的校验不得顶掉前一次的有效记录。"""
+    _complete_state()                       # 文章 A 校验通过（OOV_RESULT + ANNOTATED 指纹）
+    workflow.record_check_passage(CLEAN_RESULT, CHANGED)   # 另一个 agent 校验了文章 B
+    assert export_gate_errors(ANNOTATED) == [], "文章 A 的记录被文章 B 覆盖了"
+    fps = workflow.get_state()["part1"]["check_fingerprints"]
+    assert len(fps) == 2, fps
+    assert export_gate_errors("A third, never-checked passage."), "从未校验过的正文仍应被拦"
+
+
+def test_fingerprint_list_is_capped(state):
+    for i in range(30):
+        workflow.record_check_passage(CLEAN_RESULT, f"Passage number {i}.")
+    fps = workflow.get_state()["part1"]["check_fingerprints"]
+    assert len(fps) == 20, f"清单应有上限避免无限增长，实际 {len(fps)}"
+
+
 def test_old_state_without_fingerprint_is_not_blocked(state):
     """向后兼容：旧版本写下的状态没有 fingerprint 字段时，不做内容比对（软降级）。"""
     workflow.record_blueprint({"codes": ["WT-01"]})

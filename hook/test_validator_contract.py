@@ -51,6 +51,30 @@ def test_events_not_on_separate_lines_is_flagged():
     assert "ordering 题 stem" in got, got
 
 
+def test_stem_quote_must_still_exist_in_body():
+    """题干引号里的词必须还在正文中——这是改稿删词后长期查不出的失配。"""
+    body = "Half of them slept for eight hours; the others stayed awake until midnight."
+    qs = [{"id": 2, "stem": 'What do the underlined words "stayed awake" probably mean?',
+           "options": ["A. Did not sleep", "B. Slept well", "C. Went home", "D. Read books"],
+           "answer": "A", "type": "vocabulary_or_detail"},
+          {"id": 3, "stem": 'What does the underlined word "float" mean?',
+           "options": ["A. Rest", "B. Sit", "C. Rise", "D. Fall"], "answer": "C", "type": "detail"},
+          {"id": 5, "stem": "What is the main idea of the passage?",
+           "options": ["A. Sleep wastes time.", "B. Robots map the sea.", "C. Words are hard.",
+                       "D. Sleep helps memory."], "answer": "D", "type": "main_idea"}]
+
+    r_match = run_validate_questions(qs[:1] + qs[2:], 4, False, body)
+    assert "stem_quote_in_body" not in r_match["checks"] or r_match["checks"]["stem_quote_in_body"] == "pass"
+
+    r_mismatch = run_validate_questions(qs, 4, False, body)
+    assert r_mismatch["checks"]["stem_quote_in_body"] == "review_required", r_mismatch
+    assert any("float" in i for i in r_mismatch["issues"]), r_mismatch["issues"]
+    assert r_mismatch["all_pass"] is False
+
+    r_no_body = run_validate_questions(qs, 4)
+    assert "stem_quote_in_body" not in r_no_body["checks"], "不传 body 时不应新增检查（向后兼容）"
+
+
 def test_validator_does_not_check_answer_distribution():
     """特征化断言：同一字母出现 3 次不会让校验失败 —— 所以 SKILL 必须有修正步骤。"""
     qs = [
