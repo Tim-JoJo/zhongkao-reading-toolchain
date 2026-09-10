@@ -41,7 +41,8 @@ from docx.shared import Pt
 
 SHADE = "F2F2F2"   # 答案块底纹
 BAR = 49           # 阅读问答答案横线长度（下划线个数）
-INDENT = "425"     # 首行缩进（twips，约 2 字符）
+INDENT_CHARS = "200"  # 首行缩进字符数（1/100 字符为单位，200 = 2 字符）
+INDENT = "480"     # 首行缩进回退值（twips，2 × 12pt）；渲染器优先认 firstLineChars
 
 TYPE_TITLE = {
     "选词填空": "选词填空",
@@ -66,16 +67,29 @@ def _style(p, shade=None, indent=False):
     pf.space_after = Pt(0)
     pf.space_before = Pt(0)
     pPr = p._element.get_or_add_pPr()
+    spacing = pPr.find(qn("w:spacing"))
     if shade:
         shd = OxmlElement("w:shd")
         shd.set(qn("w:val"), "clear")
         shd.set(qn("w:color"), "auto")
         shd.set(qn("w:fill"), shade)
-        pPr.append(shd)
+        # CT_PPr 子元素有固定次序：shd 必须在 spacing 之前。append 会把它排到
+        # spacing 后面，严格的渲染器（Word/WPS）会视 pPr 为非法并丢弃整段格式。
+        if spacing is not None:
+            spacing.addprevious(shd)
+        else:
+            pPr.append(shd)
     if indent:
         ind = OxmlElement("w:ind")
+        # firstLineChars（字符制）是 Word/WPS 中文排版的优先口径，显示为「首行缩进 2 字符」；
+        # 只写绝对值 firstLine 时部分渲染器不认，缩进会丢。两者都写，各取自己认识的那个。
+        ind.set(qn("w:firstLineChars"), INDENT_CHARS)
         ind.set(qn("w:firstLine"), INDENT)
-        pPr.append(ind)
+        # ind 在 CT_PPr 里紧跟 spacing，同样不能乱插
+        if spacing is not None:
+            spacing.addnext(ind)
+        else:
+            pPr.append(ind)
 
 
 def add_para(doc, text, shade=None, bold=False, indent=False):

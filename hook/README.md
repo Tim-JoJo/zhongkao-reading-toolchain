@@ -22,6 +22,7 @@ pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
 | `test_validator_contract.py` | 校验器误报与虚假兜底 | `shows` 内含 `how` 导致 O-02 模板必刷"缺问号"噪音；排序题事件行必须 ①②③④ 分行；**校验器不检查答案分布**（特征化断言，防止将来实现了却忘记改文档） |
 | `test_gate_contract.py` | 漏步导出 / 改文后仍放行 / 档位漏问 | 未抽蓝图、未过 validate、正文漏注释都要拦；新增**正文内容指纹**：改英文内容后必须重跑 check_passage，只增删中文注释不算改（否则会拦死"注释最后一步加"的合规流程）；新增**档位门禁**：档位只认 `workflow_init(level=...)` 显式登记（check_passage 不得顺手用自己的 default 登记），未登记时 check_passage 拒跑、题目导出与报告导出都拦，登记档位与实跑档位不一致也拦 |
 | `test_export_contract.py` | 文案改动让调用方静默失效 | 曾用 `startswith("文档已保存")` 判断成功再记工作流状态，改一个字就让门禁形同虚设；现在判定集中在 `exporter.is_export_ok`，并校验苹方-简字体与 eastAsia 中文字体 |
+| `test_append_tool_contract.py` | XML 属性写了、渲染端不认 | 首行缩进只写绝对值 `w:firstLine`，WPS 等中文渲染器优先认字符制 → 用户端「没有首行缩进」（现 `firstLineChars`+`firstLine` 双写）；`w:shd` 被 `pPr.append()` 排到 `spacing` 之后违反 CT_PPr 次序，乱序 pPr 会被严格渲染器整段丢弃（现按 schema 顺序插入） |
 
 ## 已知差异（有意保留，不是 bug）
 

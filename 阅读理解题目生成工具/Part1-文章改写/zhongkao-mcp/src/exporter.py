@@ -55,6 +55,19 @@ def _set_run_font(run, size: int = 12, bold: bool = False, italic: bool = False,
     run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia)
 
 
+def _set_first_line_indent(p, width=Cm(0.75)):
+    """正文首行缩进：绝对值 + 字符制（firstLineChars=2 字符）双写。
+
+    WPS 等中文渲染器优先认 firstLineChars，只写绝对值时部分渲染器不显示缩进；
+    firstLine 留给不识别字符制的渲染器（如 LibreOffice）作回退。
+    """
+    p.paragraph_format.first_line_indent = width
+    pPr = p._element.get_or_add_pPr()
+    ind = pPr.find(qn("w:ind"))
+    if ind is not None and ind.get(qn("w:firstLineChars")) is None:
+        ind.set(qn("w:firstLineChars"), "200")
+
+
 # 猜词题目标词：从题干引号里取回，再在正文对应位置加单下划线
 # 真题句式：What does the underlined word "X" (probably) mean?
 #           What do the underlined words "a b" (probably) mean?（短语含空格）
@@ -196,7 +209,7 @@ def run_export_docx(
         for para_text in body.split("\n\n"):
             para_text = para_text.strip()
             p = doc.add_paragraph()
-            p.paragraph_format.first_line_indent = Cm(0.75)
+            _set_first_line_indent(p)
             p.paragraph_format.space_after = Pt(4)
             p.paragraph_format.line_spacing = 1.5
             # 同一目标词只划首次出现；已划过的段落不再重复
@@ -391,7 +404,7 @@ def run_export_report_docx(
 
             for para_text in section.get("paragraphs", []):
                 p = doc.add_paragraph()
-                p.paragraph_format.first_line_indent = Cm(0.75)
+                _set_first_line_indent(p)
                 p.paragraph_format.space_after = Pt(4)
                 p.paragraph_format.line_spacing = 1.5
 
@@ -473,7 +486,7 @@ def run_export_article_docx(
         # ── 正文 ──
         for para_text in body.split("\n\n"):
             p = doc.add_paragraph(para_text.strip())
-            p.paragraph_format.first_line_indent = Cm(0.75)
+            _set_first_line_indent(p)
             p.paragraph_format.space_after = Pt(4)
             p.paragraph_format.line_spacing = 1.5
             for r in p.runs:
