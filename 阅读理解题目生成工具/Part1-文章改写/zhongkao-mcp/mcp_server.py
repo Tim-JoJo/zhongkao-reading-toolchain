@@ -2,9 +2,9 @@
 中考阅读文章写作 MCP Server (Part 1)
 ===================================
 提供工具：
-  1. check_passage          — 正文指标全检(自动记录)
-  2. validate_questions     — 题目质量校验(自动记录)
-  3. export_article_docx    — 导出文章 Word 文档
+  1. check_passage          — 正文指标全检(自动记录，含正文内容指纹)
+  2. check_original_quotes  — 改编正文是否逐字引用原文(硬性)
+  3. validate_questions     — 题目质量校验(自动记录)
   4. export_docx            — 导出文章 + 题目 Word 文档(缺前置步骤时拦截)
   5. draw_blueprint         — 随机抽取题目蓝图(自动记录)
   6. workflow_init          — 开新任务时初始化状态
@@ -35,9 +35,10 @@ from src.exporter import (
     DEFAULT_ARTICLE_DIR,
     DEFAULT_REPORT_DIR,
     run_export_docx,
-    run_export_article_docx,
+    is_export_ok,
 )
 from src.blueprint import run_draw_blueprint
+from src.thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS
 from src.workflow import (
     cjk_count,
     export_annotation_warning,
@@ -55,33 +56,7 @@ from src.workflow import (
 # Tool 1: check_passage — 指标全检
 # ═══════════════════════════════════════════════════
 
-# 档位阈值（与 SKILL approved-standards.md 一致）
-# 注意：word_count 上限 350 为硬性门槛——超出将返回 review_required 且 all_pass 为 false，
-# 不得把超 350 词的文章标为可交付。
-LEVEL_THRESHOLDS = {
-    "standard": {
-        "word_count": [0, 350],
-        "average_sentence_length": [13, 15],
-        "sentence_length_p90": [0, 24],
-        "vocabulary_coverage": 0.90,
-        "oov_distinct_max": 999,
-        "proper_name_band": [0, 999],
-    },
-    "extended": {
-        "word_count": [0, 350],
-        "average_sentence_length": [16, 18],
-        "sentence_length_p90": [0, 30],
-        "vocabulary_coverage": 0.90,
-        "oov_distinct_max": 999,
-        "proper_name_band": [0, 999],
-    },
-}
-
-GRADE_LIMITS = {
-    9: {"coverage": [0.95, 0.97], "oov_ratio": [0.03, 0.05], "max_proper": 999, "max_sentence_len": 26},
-}
-
-
+# 档位/年级阈值：唯一定义在 src/thresholds.py（别再在这里抄一份）
 @mcp.tool()
 def check_passage(
     text: str,
@@ -124,7 +99,7 @@ def check_passage(
     )
     # 自动记录指标结果到工作流状态（供 export_docx 门禁用）
     if "error" not in result:
-        record_check_passage(result)
+        record_check_passage(result, text)
     return result
 
 
@@ -178,36 +153,6 @@ def validate_questions(
 
 
 # ═══════════════════════════════════════════════════
-# Tool 3: export_article_docx — 仅导出文章（Part 1 用）
-# ═══════════════════════════════════════════════════
-
-@mcp.tool()
-def export_article_docx(
-    title: str,
-    body: str,
-    output_path: str | None = None,
-) -> str:
-    """导出英文文章为 .docx 文档（不含题目）。
-
-    Args:
-        title: 文章标题
-        body: 英文正文（段落用 \\n\\n 分隔）
-        output_path: 输出文件路径（含 .docx 扩展名），不传则保存至 Downloads\生成文章
-
-    Returns:
-        str: 成功时返回保存路径，失败时返回错误信息
-    """
-    if output_path is None:
-        safe_name = re.sub(r'[<>:"/\\|?*]', '-', title)[:80]
-        output_path = str(Path(DEFAULT_ARTICLE_DIR) / f"{safe_name}.docx")
-    return run_export_article_docx(
-        title=title,
-        body=body,
-        output_path=output_path,
-    )
-
-
-# ═══════════════════════════════════════════════════
 # Tool 4: export_docx — Word 导出（含题目，供 Part 2 用）
 # ═══════════════════════════════════════════════════
 
@@ -251,7 +196,7 @@ def export_docx(
         explanations=explanations,
     )
     # 导出成功后自动记录（annotated_body = 正文是否含中文注释）
-    if result.startswith("文档已保存"):
+    if is_export_ok(result):   # 不再硬编码返回前缀（改文案曾静默让记账失效）
         record_docx_exported(annotated=bool(cjk_count(body) > 0))
     if warning:
         result = f"{result}\n{warning}"

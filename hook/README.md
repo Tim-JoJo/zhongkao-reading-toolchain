@@ -1,0 +1,37 @@
+# hook —— 「容易遗漏/出错」点的自动校验
+
+这些不是普通单元测试，而是把**已经踩过的坑**钉成回归锁：谁把旧问题改回来，这里必须变红。
+每个文件对应一类真实事故，出处见各文件顶部 docstring。
+
+## 怎么跑
+
+```bash
+pytest hook -q                 # 全部（装了 spacy 才跑蓝图种子扫描，否则自动跳过）
+pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
+```
+
+依赖：`pytest`（必需）、`python-docx`（导出契约用，缺了自动跳过）、`spacy + en_core_web_sm`（蓝图契约用，缺了自动跳过）。
+仓库内的 venv：`/tmp/zk-venv/bin/python -m pytest hook -q`。
+
+## 已挂钩的易错点
+
+| hook 文件 | 钉住的事故类型 | 具体案例 |
+|---|---|---|
+| `test_doc_consistency.py` | 改一处忘另一处 | 词表口径曾在 5 处并存（1601 / 2,795 / 3,585）；荧光图例写"三种色"而表里只有 2 行；"必答 3 问"下实列 5 条；黑名单到 W11 而正文引用只到 W10；弃用工具 `export_article_docx` 又冒回 MCP 工具表；阈值/导出前缀被抄成多份副本 |
+| `test_blueprint_contract.py` | 出题分布静默跑偏 | 文档承诺 Q1 写作手法 30% / Q2 词义 70% / Q4 推断 20% / Q3 抽中 I-08 转 M-03 / 带标题时 Q5 不出 best title / 双 I-08 角点约 0.05% —— 全部按种子扫描核对 |
+| `test_validator_contract.py` | 校验器误报与虚假兜底 | `shows` 内含 `how` 导致 O-02 模板必刷"缺问号"噪音；排序题事件行必须 ①②③④ 分行；**校验器不检查答案分布**（特征化断言，防止将来实现了却忘记改文档） |
+| `test_gate_contract.py` | 漏步导出 / 改文后仍放行 | 未抽蓝图、未过 validate、正文漏注释都要拦；新增**正文内容指纹**：改英文内容后必须重跑 check_passage，只增删中文注释不算改（否则会拦死"注释最后一步加"的合规流程） |
+| `test_export_contract.py` | 文案改动让调用方静默失效 | 曾用 `startswith("文档已保存")` 判断成功再记工作流状态，改一个字就让门禁形同虚设；现在判定集中在 `exporter.is_export_ok`，并校验苹方-简字体与 eastAsia 中文字体 |
+
+## 已知差异（有意保留，不是 bug）
+
+在 `conftest.py` 的 `KNOWN_DIVERGENCES` 里登记，新增差异必须先进这里并写理由，否则 hook 失败：
+
+- `grade_max_proper`：zhongkao-mcp 走 SKILL「专名不设数量限制」(999)，vocab-checker 的独立年级校验沿用历史口径 `max_proper=5`（仅人工快检用）。**待你裁决**是否统一。
+- `rc_blacklist_w11`：rc SKILL.md 黑名单有 W1–W11，`references/design-logic.md` 只到 W1–W10；Reference 索引写「10 反模式详解」描述的是后者，属准确。待办：把 W11 回写进 design-logic.md。
+
+## 还没挂钩的已知缺口（诚实清单）
+
+- **猜词题目标词下划线未实现**：SKILL 要求正文目标词加单下划线，但 `exporter.py` 没有对应逻辑（纯源码导出路径下无法自动加），目前靠人工。
+- **门禁的跨进程信任边界**：内容指纹存在工作目录的 JSON 里，同一工作目录被不同 agent 共享时会互相覆盖（文档已注明需 `workflow_init`）。
+- **覆盖率是自证的**：`_agg_stem` 激进词干匹配会系统性放宽判定，覆盖率偏高；这是刻意的工程取舍，不设 hook。

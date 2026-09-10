@@ -10,29 +10,8 @@ from src.checker import run_check_passage
 from src.validator import run_validate_questions
 from src.exporter import run_export_docx
 
-# ── 档位阈值和年级限制（从 mcp_server 复制，避免循环依赖）─
-LEVEL_THRESHOLDS = {
-    "standard": {
-        "word_count": [220, 240],
-        "average_sentence_length": [13, 15],
-        "sentence_length_p90": [0, 24],
-        "vocabulary_coverage": 0.90,
-        "oov_distinct_max": 10,
-        "proper_name_band": [2, 3],
-    },
-    "extended": {
-        "word_count": [350, 450],
-        "average_sentence_length": [16, 18],
-        "sentence_length_p90": [0, 30],
-        "vocabulary_coverage": 0.90,
-        "oov_distinct_max": 15,
-        "proper_name_band": [3, 5],
-    },
-}
-
-GRADE_LIMITS = {
-    9: {"coverage": [0.95, 0.97], "oov_ratio": [0.03, 0.05], "max_proper": 5, "max_sentence_len": 26},
-}
+# ── 阈值：单一来源 src/thresholds.py（不要再在本文件里抄一份副本）──
+from src.thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS
 
 # ── 测试数据 ──
 

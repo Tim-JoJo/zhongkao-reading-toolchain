@@ -59,8 +59,10 @@ def run_validate_questions(
                 format_ok = False
         stem = q.get("stem", "")
         if stem and not stem.strip().endswith("?") and not stem.strip().endswith("?"):
-            # 题干应以问号结尾，但有些题型（如完成句子）可能不用问号，故仅提醒
-            if "best title" in stem.lower() or "why" in stem.lower() or "how" in stem.lower():
+            # 题干应以问号结尾，但排序题以 ①~④ 事件清单结尾，故仅提醒。
+            # 用词边界匹配：旧写法 "how" in stem.lower() 会被 "shows" 里的 how 命中，
+            # 导致 O-02 模板（Which of the following shows the correct order…?）必然误报。
+            if re.search(r"\b(?:why|how)\b", stem, re.IGNORECASE) or "best title" in stem.lower():
                 if not stem.strip().endswith("?"):
                     issues.append(f"题{qid}：题干可能缺少问号")
     checks["option_format"] = "pass" if format_ok else "fail"
