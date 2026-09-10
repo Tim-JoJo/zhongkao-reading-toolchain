@@ -199,10 +199,14 @@ class VocabChecker:
         self.base_vocab: Set[str] = parse_vocab_md(vocab_md_path)
         self.vocab_lemmas: Set[str] = self._build_lemma_set()
 
+        # 提示走 stderr：MCP stdio 传输的 stdout 只允许一行一个 JSON-RPC 对象，
+        # 裸 print 会污染协议流（目前靠 FastMCP 捕获 stdout 兜着，不该依赖它）。
+        import sys as _sys
         print(
             f"[VocabChecker] 词库加载完毕: "
             f"原始词形 {len(self.base_vocab):,} 个, "
-            f"lemma 集合 {len(self.vocab_lemmas):,} 个"
+            f"lemma 集合 {len(self.vocab_lemmas):,} 个",
+            file=_sys.stderr,
         )
 
     # ── 内部方法 ──

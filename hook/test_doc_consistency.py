@@ -16,8 +16,10 @@ import sys
 
 import pytest
 
-from conftest import (AW, DESIGN_LOGIC, GEN, MCP, QG, RC, REPO, REW,
+from conftest import (AW, DESIGN_LOGIC, GEN, MCP, P1, QG, RC, REPO, REW,
                       SHARED_THRESHOLDS, VOCAB_MD, VOCAB_SRV)
+
+VC_DIR = P1 / "vocab-checker"
 
 # 已废弃、无法复核的词表口径（词表说明区自己会提到它们以作禁止，其余文件一律不得出现）
 FORBIDDEN_VOCAB_NUMBERS = ("1601", "2,795", "3,585", "3,581", "2,795+")
@@ -237,6 +239,65 @@ def test_mcp_shim_falls_back_to_mcpserver(tmp_path):
     """)
     out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300)
     assert "SHIM_FALLBACK_OK" in out.stdout, (out.stdout + out.stderr)[-1500:]
+
+
+SERVER_PATH_FILES = None
+
+
+def _bare_prints(path):
+    """找出不该出现的裸 print()：豁免 print_report / main 与 __main__ 块（CLI 用）。"""
+    import ast
+
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    found = []
+    ALLOWED = {"print_report", "main", "interactive"}
+
+    class V(ast.NodeVisitor):
+        def __init__(self):
+            self.stack = []
+
+        def visit_FunctionDef(self, node):
+            self.stack.append(node.name)
+            self.generic_visit(node)
+            self.stack.pop()
+
+        visit_AsyncFunctionDef = visit_FunctionDef
+
+        def visit_If(self, node):
+            src = ast.dump(node.test)
+            if "__name__" in src and "__main__" in src:
+                return                      # CLI 入口整块豁免
+            self.generic_visit(node)
+
+        def visit_Call(self, node):
+            f = node.func
+            name = getattr(f, "id", None) or getattr(f, "attr", None)
+            writes_stdout = not any(kw.arg == "file" for kw in node.keywords)
+            if name == "print" and writes_stdout and not (self.stack and self.stack[-1] in ALLOWED):
+                found.append((node.lineno, ast.unparse(node)[:70]))
+            self.generic_visit(node)
+
+    V().visit(tree)
+    return found
+
+
+def test_no_stdout_print_in_server_path():
+    """MCP server 的导入路径里不得有裸 print()。
+
+    判定口径：只看**写 stdout 的** print（没带 `file=` 参数的）；`print(..., file=sys.stderr)` 是许可做法。
+    MCP 的 stdio 传输是「一行一个 JSON-RPC 对象」：stdout 混进任何非 JSON 行都会污染协议流。
+    实测（两个版本各起一次真 stdio 服务、发 initialize/tools-list/tools-call）目前 0 行污染，
+    但那是因为 FastMCP 在工具执行期间会捕获 stdout —— 不该依赖框架这个行为，所以这里锁死。
+    """
+    paths = [MCP / "mcp_server.py", VOCAB_SRV, VC_DIR / "vocab_checker.py",
+             *sorted((MCP / "src").glob("*.py")), SHARED_THRESHOLDS]
+    bad = []
+    for p in paths:
+        if not p.exists():
+            continue
+        for lineno, snippet in _bare_prints(p):
+            bad.append(f"{p.relative_to(REPO)}:{lineno} {snippet}")
+    assert not bad, "server 导入路径里出现了裸 print（会污染 stdio 协议流）：\n" + "\n".join(bad)
 
 
 def test_export_prefix_single_source():
