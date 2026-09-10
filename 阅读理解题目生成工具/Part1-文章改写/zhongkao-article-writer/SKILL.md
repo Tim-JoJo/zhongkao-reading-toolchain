@@ -27,7 +27,7 @@ description: Use when the user wants to turn an English news, magazine, science,
 - 词汇降级与句法处理（第 5 步撰写、第 6 步地道性审校）时，读 `references/adaptation-methods.md`（词汇/句法/语篇降级方法 + 地道性门槛 + Humanizer 清单）
 - 材料准入与内容审校（第 1 步准入、第 7 步指标）时，读 `references/curriculum-constraints.md`（课标约束矩阵 + 内容审校依据）
 
-不要把 1601 条词表全部载入上下文。词汇检查优先使用 `mcp__vocab-checker__check_text` 和 `mcp__vocab-checker__check_grade_level`（基于 spaCy 词形还原 + 派生词缀匹配，覆盖率更准确）。
+不要把手写词表全部载入上下文（词表口径以 `../vocab-checker/二级、三级词汇表（初中毕业要求）.md` 头部的说明区为准：3,585 条词条，含二级 506 条、常用词组 67 条）。词汇检查优先使用 `mcp__vocab-checker__check_text` 和 `mcp__vocab-checker__check_grade_level`（基于 spaCy 词形还原 + 派生词缀匹配，覆盖率更准确）。
 
 **开始新任务时**，先用 `mcp__zhongkao-mcp__workflow_init(level="...")`（或 `workflow_reset`）清空上一个任务的记录，避免旧状态干扰本次交付（工作流状态写入 `.zhongkao_workflow.json`，供 Part2 的导出门禁使用）；可随时用 `mcp__zhongkao-mcp__workflow_status` 查看各硬性步骤完成情况。`check_passage` 会自动记录指标结果，无需手动登记。
 
@@ -134,7 +134,7 @@ description: Use when the user wants to turn an English news, magazine, science,
 - **搭骨架**：逐段标功能（导语钩子/分论点/证据/收尾），每段一个"意图"
 - **撰写**：每段按"意图"填充素材；强制跑共识模型（设问承诺要兑现、细节要可成像、数据要挂场景、引语要分工、结尾要升级不总结）
 - **标题**：重新拟定
-- **段落**：4–5 段，每段有唯一功能，每段不超过 90 词，全文不超过 350 词（中考短文不用 Level 2 小节标题分区）
+- **段落**：4–5 段，每段有唯一功能，每段不超过 90 词，全文 **230–320 词**（>350 为硬失败上限；实测 250–320 词最容易同时落进覆盖率 95%–97% 与句长带宽，不要只写到合规下限就收笔）（中考短文不用 Level 2 小节标题分区）
 - **语言**：所有句子原创撰写，不照搬原文句式。**不可引用任何原文原句**（硬性规则；导出前由第 7 步的原文原句检测 hook 复核，任何命中即改写重写）
 - **专名**：全部保留，不做泛化
 - **引述**：保持发言人身份和观点不变
@@ -232,6 +232,8 @@ mcp__zhongkao-mcp__check_passage(text="正文", level="standard", grade=9, prope
     | 长难句 | 粉 `WD_COLOR_INDEX.PINK` | 该句为长难句，并说明类型 | 句子含多层从句/非谓语/并列复合等复杂结构；类型在"长难句清单"节逐句说明 |
 
     注：一句可同时属于多个类别（如既是事实来源又是长难句），**正文允许对同一句叠加使用高亮**；图例中按该句最主要的属性着色即可。
+
+    本流程只用**黄、粉两色**（事实来源 / 长难句）。`run_export_report_docx` 另支持 `turquoise`，如需启用第三类标注，须先在项目 CLAUDE.md 的「荧光标注图例」同步定义色义后再使用。
 
     报告全文字体格式与 Part2 题目 Word 中的正文一致（Arial 12pt、首行缩进 0.75cm、1.5 倍行距、中文字体微软雅黑；标题 Arial 20pt 加粗居中）。质量检查只写结论（严重项/工程带宽/Humanizer/地道性/最终状态）。
 5. **不导出纯文章 Word**（不再调用 `mcp__zhongkao-mcp__export_article_docx`）；文章正文由 Part2 的题目 Word（`export_docx`）承载，正文在此处带注释版本即交付给 Part2。
