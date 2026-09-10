@@ -29,6 +29,7 @@ mcp = FastMCP(
 import re
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # 共用阈值在上层
 from src.checker import run_check_passage, run_check_original_quotes
 from src.validator import run_validate_questions
 from src.exporter import (
@@ -38,7 +39,7 @@ from src.exporter import (
     is_export_ok,
 )
 from src.blueprint import run_draw_blueprint
-from src.thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS
+from thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS
 from src.workflow import (
     cjk_count,
     export_annotation_warning,
@@ -56,7 +57,7 @@ from src.workflow import (
 # Tool 1: check_passage — 指标全检
 # ═══════════════════════════════════════════════════
 
-# 档位/年级阈值：唯一定义在 src/thresholds.py（别再在这里抄一份）
+# 档位/年级阈值：唯一定义在 ../thresholds.py（两个 server 共用，别再抄副本）
 @mcp.tool()
 def check_passage(
     text: str,

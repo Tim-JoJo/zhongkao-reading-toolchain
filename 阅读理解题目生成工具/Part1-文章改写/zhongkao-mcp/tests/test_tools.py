@@ -10,8 +10,9 @@ from src.checker import run_check_passage
 from src.validator import run_validate_questions
 from src.exporter import run_export_docx
 
-# ── 阈值：单一来源 src/thresholds.py（不要再在本文件里抄一份副本）──
-from src.thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS
+# ── 阈值：单一来源 ../thresholds.py（两个 server 共用，别再抄副本）──
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+from thresholds import GRADE_LIMITS, LEVEL_THRESHOLDS  # noqa: E402
 
 # ── 测试数据 ──
 

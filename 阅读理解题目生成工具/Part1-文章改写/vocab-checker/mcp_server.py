@@ -114,9 +114,10 @@ def check_article(title: str, body: str, proper_names: list[str] | None = None) 
 # Tool 3: check_grade_level — 按年级标准校验
 # ═══════════════════════════════════════════════════
 
-GRADE_LIMITS = {
-    9: {"coverage": [0.95, 0.97], "oov_ratio": [0.03, 0.05], "max_proper": 5, "max_sentence_len": 26, "max_compound_ratio": 0.40},
-}
+# 年级阈值：唯一定义在 ../thresholds.py（与 zhongkao-mcp 共用同一份，别再抄副本）。
+# 历史上这里另存了一份 max_proper=5，与 SKILL「专名不设数量限制」冲突且无人复审，已随统一移除。
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from thresholds import GRADE_LIMITS  # noqa: E402
 
 
 @mcp.tool()
