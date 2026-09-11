@@ -1,3 +1,0 @@
-spacy>=3.8
-mcp>=1.10   # 1.x(FastMCP) 与 2.x(MCPServer) 均可：mcp_server.py 里有 try/except 兼容层，两端已实测加载
-python-docx>=1.0
