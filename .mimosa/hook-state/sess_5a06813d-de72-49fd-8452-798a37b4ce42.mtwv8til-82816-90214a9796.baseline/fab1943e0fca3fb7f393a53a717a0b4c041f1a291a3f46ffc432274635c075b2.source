@@ -7,7 +7,6 @@
 - 题干无 ask/question mark
 - 选项长度平衡
 - 无 all/never/only 等绝对词泄露
-- 证据段落单调性（携带 answer_paragraph 时，Qn > Qn+1 即违规）
 """
 
 from __future__ import annotations
@@ -44,10 +43,6 @@ def run_validate_questions(
     这是机器此前查不出的失配：实测 Q 问 "float"，改稿把该词改成 "big soft bag"，
     题干与正文从此对不上，而老的校验器只看选项格式与答案字母，一律放行。
     不传 body 时该检查不参与（保持向后兼容）。
-
-    题目可携带 answer_paragraph（数字段号）参与「证据段落单调性」校验：
-    按题序出现 Qn > Qn+1 即 review_required（SKILL 要求 Q1<…<Q5 单调递增）。
-    排序/全文题不绑定单段，省略该字段或写「全文」即不参与比较。
     """
     if option_count not in OPTION_LETTERS:
         return {"error": f"option_count 须为 3 或 4，收到 {option_count}"}
@@ -182,28 +177,6 @@ def run_validate_questions(
             checks["stem_quote_in_body"] = "review_required"
         else:
             checks["stem_quote_in_body"] = "pass"
-
-    # ── 检查 7: 证据段落单调性（仅当题目携带 answer_paragraph 才参与，向后兼容）──
-    # SKILL 第 3 步落点规划要求 Q1<Q2<Q3<Q4<Q5 单调递增；此前只靠命题 agent 自律，
-    # 批量生产中出现过 Qn>Qn+1 回退（详见 hook/test_validator_contract）。
-    # answer_paragraph：数字段号；排序/全文题不绑定单段，省略或写「全文」即不参与比较（可跳段，同段不算回退）。
-    anchors = []
-    for pos, q in enumerate(questions, 1):
-        ap = q.get("answer_paragraph")
-        if isinstance(ap, int) and not isinstance(ap, bool):
-            anchors.append((pos, ap))
-    if len(anchors) >= 2:
-        drops = [
-            (anchors[i][0], anchors[i][1], anchors[i + 1][0], anchors[i + 1][1])
-            for i in range(len(anchors) - 1)
-            if anchors[i][1] > anchors[i + 1][1]
-        ]
-        if drops:
-            detail = "、".join(f"第{p1}题(段{a})→第{p2}题(段{b})" for p1, a, p2, b in drops)
-            issues.append(f"证据段落回退：{detail}（违反 SKILL「Q1<Q2<Q3<Q4<Q5 单调递增」，请重排题序或重锚证据段）")
-            checks["evidence_paragraph_order"] = "review_required"
-        else:
-            checks["evidence_paragraph_order"] = "pass"
 
     # ── 汇总 ──
     all_pass = all(v == "pass" for v in checks.values())
