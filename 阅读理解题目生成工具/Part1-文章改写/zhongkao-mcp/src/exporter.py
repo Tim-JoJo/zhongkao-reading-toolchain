@@ -55,13 +55,17 @@ def _set_run_font(run, size: int = 12, bold: bool = False, italic: bool = False,
     run._element.rPr.rFonts.set(qn("w:eastAsia"), east_asia)
 
 
-def _set_first_line_indent(p, width=Cm(0.75)):
+def _set_first_line_indent(p, width=None):
     """正文首行缩进：绝对值 + 字符制（firstLineChars=2 字符）双写。
 
     WPS 等中文渲染器优先认 firstLineChars，只写绝对值时部分渲染器不显示缩进；
     firstLine 留给不识别字符制的渲染器（如 LibreOffice）作回退。
+    width 不能作 Cm(0.75) 默认参数——无 python-docx 的环境（蓝图契约 CI job）
+    导入本模块时 Cm 未定义，import 期即 NameError，破坏 try/except ImportError
+    的「无 docx 也能导入」设计。改为调用时求值。
     """
-    p.paragraph_format.first_line_indent = width
+    if width is None:
+        width = Cm(0.75)
     pPr = p._element.get_or_add_pPr()
     ind = pPr.find(qn("w:ind"))
     if ind is not None and ind.get(qn("w:firstLineChars")) is None:
