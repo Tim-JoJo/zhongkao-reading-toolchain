@@ -6,7 +6,6 @@
   2. list_unknown    — 列出/导出超纲词详情
 """
 
-import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -76,11 +75,9 @@ def check_text(text: str, proper_names: list[str] | None = None) -> dict[str, An
         return {"error": "文本为空", "coverage": 1.0}
     result = c.check(text, proper_names=proper_names)
 
-    # 补频次统计
-    freq = {}
-    for d in result["unknown_details"]:
-        freq[d["word"]] = freq.get(d["word"], 0) + 1
-    result["word_frequency"] = sorted(freq.items(), key=lambda x: -x[1])
+    # 补频次统计（与 vocab_checker.check_article 共用同一 helper；须在 _get_checker 延迟导入后进行）
+    from vocab_checker import unknown_word_frequency  # noqa: E402
+    result["word_frequency"] = unknown_word_frequency(result["unknown_details"])
 
     # 移除不可序列化的 spaCy 内部对象
     result.pop("_doc", None)

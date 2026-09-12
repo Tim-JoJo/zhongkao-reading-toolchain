@@ -447,7 +447,6 @@ def run_export_report_docx(
 
 
 # ── 默认输出目录 ──
-DEFAULT_OUTPUT_DIR = str(Path.home() / "Downloads")
 DEFAULT_ARTICLE_DIR = str(Path.home() / "Downloads" / "生成文章")
 DEFAULT_REPORT_DIR = str(Path.home() / "Downloads" / "文章报告")
 
