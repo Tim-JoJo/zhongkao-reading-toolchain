@@ -115,14 +115,14 @@ def _check_grade_level(vocab_result: dict, grade_limits: dict) -> dict:
         # 兜底：如果调用方没传 doc，用本模块的单例重新解析空文本
         # （vocab_checker 里公开名是 get_checker，没有 _get_checker——之前这里 import 会直接 ImportError）
         doc = _get_checker().nlp("")
-    sentences = [s for s in doc.sents]
-    total_words = sum(1 for t in doc if not t.is_punct and not t.is_space and not t.like_num and not t.is_currency and not t.is_bracket and not t.is_quote)
-    avg_sent_len = total_words / len(sentences) if sentences else 0
+    # 句均与 metrics.average_sentence_length 同源（_sentence_metrics：同过滤口径、剔除零内容句），
+    # 否则同一篇稿子对外出现两个句均数字。
+    avg_sent_len = _sentence_metrics(doc)["average"]
 
     cov_lo, cov_hi = grade_limits["coverage"]
     oov_lo, oov_hi = grade_limits["oov_ratio"]
     # oov_ratio 分母与覆盖率口径一致（唯一词元总数）
-    unique_words = vocab_result.get("total_tokens", total_words)
+    unique_words = vocab_result.get("total_tokens", 0)
     oov_ratio = unknown_tokens / unique_words if unique_words else 0.0
 
     checks = {
@@ -142,7 +142,7 @@ def _check_grade_level(vocab_result: dict, grade_limits: dict) -> dict:
             "pass": proper_count <= grade_limits.get("max_proper", 99),
         },
         "avg_sentence_length": {
-            "value": round(avg_sent_len, 1),
+            "value": avg_sent_len,
             "required_max": grade_limits["max_sentence_len"],
             "pass": avg_sent_len <= grade_limits["max_sentence_len"],
         },
@@ -176,7 +176,14 @@ def run_check_passage(
     grade_result = _check_grade_level(vocab_result, grade_limits)
 
     # 2. 结构指标（复用 vocab_result 数据，不用 regex）
-    wc = vocab_result.get("token_occurrences", vocab_result["total_tokens"])
+    # 篇幅口径 = 全部实词词元的出现次数（含专名）。token_occurrences 把专名排除在外
+    #（vocab_checker 将其归入 proper_count），实测 320 词、含 40 个专名的稿子只报 280，
+    # 「全文 ≤350 词」硬门槛会被高专名浓度的稿子绕过；doc 缺失时退回旧口径。
+    if doc is not None:
+        wc = sum(1 for t in doc if not (t.is_punct or t.is_space or t.like_num
+                                        or t.is_currency or t.is_bracket or t.is_quote))
+    else:
+        wc = vocab_result.get("token_occurrences", vocab_result["total_tokens"])
     sent = _sentence_metrics(doc) if doc is not None else {"average": 0.0, "p90": 0, "count": 0, "lengths": []}
 
     # 3. 专名

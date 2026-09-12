@@ -66,12 +66,12 @@ QUESTIONS = [
     },
     {
         "id": 4,
-        "stem": "Put the following events about the economy in the correct order.\na. The government passed a five-year plan.\nb. The meeting will decide the money plan for the rest of the year.\nc. The government is speeding up big building projects.\nd. The economy's growth speed slowed down.",
+        "stem": "Put the following events about the economy in the correct order.\n①. The government passed a five-year plan.\n②. The meeting will decide the money plan for the rest of the year.\n③. The government is speeding up big building projects.\n④. The economy's growth speed slowed down.",
         "options": [
-            "A. a-b-c-d",
-            "B. c-b-a-d",
-            "C. a-c-d-b",
-            "D. d-c-b-a",
+            "A. ①②③④",
+            "B. ③②①④",
+            "C. ①③④②",
+            "D. ④③②①",
         ],
         "answer": "A",
         "type": "ordering",
@@ -130,7 +130,12 @@ def test_check_passage():
     assert result["metrics"]["word_count"]["value"] > 0, "词数应大于 0"
     assert result["metrics"]["vocabulary_coverage"]["value"] > 0, "覆盖率应有效"
     assert isinstance(result["grade_check"]["all_pass"], bool), "grade_check.all_pass 应为布尔值"
-    print(f"\n  ℹ️ all_pass={result['all_pass']}（覆盖率 98.46% 超出 95%-97% band，预期为 review_required）")
+    # 样例正文覆盖率 0.9846 超出 95%-97% band：带宽判在 grade_check（metrics 只守下限），
+    # 必须如实判 False、all_pass 为 False——此处锁的是「超带宽不能静默绿灯」
+    cov = result["grade_check"]["details"]["coverage"]
+    assert cov["pass"] is False, f"覆盖率 {cov['value']} 超出 {cov['required']} band，应判不通过"
+    assert result["all_pass"] is False, "存在不达标项时 all_pass 必须为 False"
+    print(f"\n  ℹ️ all_pass={result['all_pass']}（覆盖率 {cov['value']} 超出 {cov['required']} band）")
     print("\n  ✅ check_passage 通过")
 
 
@@ -155,6 +160,8 @@ def test_validate_questions():
     # 断言
     assert result["checks"]["option_format"] == "pass", "选项格式应通过"
     assert result["checks"]["unique_answer"] == "pass", "答案唯一性应通过"
+    assert result["checks"].get("ordering_events") == "pass", "排序题样例应过 ①② 事件行门禁"
+    assert result["all_pass"] is True, "标准样例题组应全绿"
     print("\n  ✅ validate_questions 通过")
 
 

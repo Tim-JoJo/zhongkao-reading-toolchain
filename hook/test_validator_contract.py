@@ -47,8 +47,47 @@ def test_best_title_without_question_mark_still_flagged():
 
 
 def test_events_not_on_separate_lines_is_flagged():
+    """①② 事件行缺失：issues 提示 + 门禁项（all_pass=False），旧式 a./b. 题组不再放行导出。
+
+    曾经只进 issues、不进 checks：CLAUDE.md 第 9 节承诺「校验端检查 ①②」，
+    但 all_pass 对它视而不见，含 a./b. 的题组照常导出（门禁漏洞，2026-09-12 堵上）。
+    """
     got = issues_of(q4("Which is the correct order?\n①. A ②. B ③. C ④. D"))
     assert "ordering 题 stem" in got, got
+
+    r_ok = run_validate_questions(_full5_with_paras(), 4)
+    assert r_ok["checks"]["ordering_events"] == "pass", r_ok["checks"]
+
+    qs = _full5_with_paras()
+    qs[3]["stem"] = ("Which is the correct order?\na. The team sent robots into the sea."
+                     "\nb. The robots found tube worms.\nc. The team published the maps."
+                     "\nd. The robots returned to the ship.")
+    qs[3]["options"] = ["A. a-b-c-d", "B. b-a-d-c", "C. c-d-a-b", "D. d-c-b-a"]
+    r_bad = run_validate_questions(qs, 4)
+    assert r_bad["checks"]["ordering_events"] == "review_required", r_bad["checks"]
+    assert r_bad["all_pass"] is False
+
+
+def test_extra_options_do_not_crash():
+    """5 个选项 vs option_count=4：曾 IndexError 崩溃，agent 只看到框架级报错。"""
+    q = {"id": 3, "stem": "What is true according to the passage?", "type": "detail",
+         "options": ["A. X is good.", "B. Y is fine.", "C. Z is bad.", "D. W is big.",
+                     "E. This choice is never right."], "answer": "A"}
+    r = run_validate_questions([q], 4)
+    assert r["checks"]["option_format"] == "fail", r
+    assert any("应有 4 个选项，实际 5 个" in i for i in r["issues"]), r["issues"]
+    # 越界下标的干扰项标签回退为 chr(ord('A')+i)，绝对词提示照常可读
+    assert any("干扰项 E 含绝对词" in i for i in r["issues"]), r["issues"]
+    assert r["all_pass"] is False
+
+
+def test_none_stem_and_none_options_do_not_crash():
+    """stem=None 曾 AttributeError、options=None 曾 TypeError——都该变成可读 issue。"""
+    qs = [{"id": 1, "stem": None, "options": ["A. a", "B. b", "C. c", "D. d"], "answer": "A", "type": "detail"},
+          {"id": 2, "stem": "What can we infer from the passage?", "options": None, "answer": "B", "type": "detail"}]
+    r = run_validate_questions(qs, 4)
+    assert r["all_pass"] is False
+    assert r["checks"]["option_format"] == "fail"
 
 
 def test_stem_quote_must_still_exist_in_body():

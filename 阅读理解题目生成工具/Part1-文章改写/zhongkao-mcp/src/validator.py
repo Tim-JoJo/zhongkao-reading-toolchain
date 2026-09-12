@@ -8,6 +8,7 @@
 - 选项长度平衡
 - 无 all/never/only 等绝对词泄露
 - 证据段落单调性（携带 answer_paragraph 时，Qn > Qn+1 即违规）
+- 排序题事件行：stem 须以 ①② 开头逐行列出事件，缺失即 review_required（拦截导出）
 """
 
 from __future__ import annotations
@@ -51,12 +52,14 @@ def run_validate_questions(
     format_ok = True
     for q in questions:
         qid = q.get("id", "?")
-        opts = q.get("options", [])
+        opts = q.get("options") or []
         if len(opts) != option_count:
             issues.append(f"题{qid}：应有 {option_count} 个选项，实际 {len(opts)} 个")
             format_ok = False
         for i, opt in enumerate(opts):
-            expected_prefix = f"{letters[i]}."
+            # letters[i] 在「选项数 > option_count」时越界：曾让整次校验抛 IndexError，
+            # agent 只看到框架级报错、拿不到「应有 N 个选项」的修法提示。
+            expected_prefix = f"{letters[i]}." if i < len(letters) else f"{chr(ord('A') + i)}."
             if not opt.strip().startswith(expected_prefix):
                 issues.append(f"题{qid} 选项{i+1}：应以 {expected_prefix} 开头，实际 '{opt[:3]}...'")
                 format_ok = False
@@ -70,18 +73,22 @@ def run_validate_questions(
                 issues.append(f"题{qid}：题干可能缺少问号")
     checks["option_format"] = "pass" if format_ok else "fail"
 
-    # ── 检查 1b: 题干格式防错（咨询性，不影响 all_pass）──
-    # 1) stem 不应自带数字标号（导出器会自动编号，避免 "1. 1." 重复）
-    # 2) ordering 题 stem 应先用 a./b./c./d. 列出事件（防"只给选项序列、没写事件"）
+    # ── 检查 1b: 题干格式防错 ──
+    # 1) stem 不应自带数字标号（导出器会自动编号，避免 "1. 1." 重复）——咨询性提示
+    # 2) ordering 题 stem 应先用 ①②③④ 逐行列出事件（防"只给选项序列、没写事件"）——门禁项
     for q in questions:
         qid = q.get("id", "?")
-        stem = q.get("stem", "").strip()
+        stem = (q.get("stem") or "").strip()
         if re.match(r"^\d+\s*[.．、]\s*", stem):
             issues.append(f"题{qid}：stem 以数字标号开头（'{stem[:4]}...'），导出器会自动编号，会变成 '1. 1.' 重复；请去掉数字前缀")
         if q.get("type") == "ordering":
-            # 排序题事件用 ①~④ 标号，一行一个事件
+            # 排序题事件用 ①~④ 标号，一行一个事件（CLAUDE.md 第 9 节）
             if not (re.search(r"(?m)^\s*①", stem) and re.search(r"(?m)^\s*②", stem)):
                 issues.append(f"题{qid}：ordering 题 stem 应先用 ①/②/③/④ 列出各事件（每事件一行），再给选项序列")
+                # 门禁项：缺失曾只进 issues、all_pass 仍为 true，旧式 a./b. 题组会照常导出
+                checks["ordering_events"] = "review_required"
+            else:
+                checks.setdefault("ordering_events", "pass")
         if q.get("type") == "vocabulary_or_detail" and str(q.get("code", "")).startswith("V"):
             # 猜词题题干：真题格式 `What does the underlined word "X" in Paragraph N (probably) mean?`
             # 或兼容旧空线格式 `The word "X" ... means ______?`；须以问号结尾
@@ -130,7 +137,7 @@ def run_validate_questions(
     # ── 检查 4: 选项长度平衡 ──
     balance_ok = True
     for q in questions:
-        opts = q.get("options", [])
+        opts = q.get("options") or []
         lengths = [len(opt.strip()) for opt in opts]
         if lengths and max(lengths) > 2 * min(lengths) and max(lengths) - min(lengths) > 30:
             qid = q.get("id", "?")
@@ -142,7 +149,7 @@ def run_validate_questions(
     leak_ok = True
     for q in questions:
         qid = q.get("id", "?")
-        opts = q.get("options", [])
+        opts = q.get("options") or []
         answer = str(q.get("answer") or "").strip().upper()
         correct_idx = letters.index(answer) if answer in letters else -1
         for i, opt in enumerate(opts):
@@ -153,7 +160,9 @@ def run_validate_questions(
             for pat in ABSOLUTE_PATTERNS:
                 m = re.search(pat, opt_clean, re.IGNORECASE)
                 if m:
-                    issues.append(f"题{qid} 干扰项 {letters[i]} 含绝对词 '{m.group()}'，可能泄露")
+                    # 干扰项下标可能超出 option_count（同检查 1 的越界场景）
+                    label = letters[i] if i < len(letters) else chr(ord("A") + i)
+                    issues.append(f"题{qid} 干扰项 {label} 含绝对词 '{m.group()}'，可能泄露")
                     leak_ok = False
     checks["absolute_word_leak"] = "pass" if leak_ok else "review_required"
 

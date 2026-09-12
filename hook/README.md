@@ -19,9 +19,10 @@ pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
 |---|---|---|
 | `test_doc_consistency.py` | 改一处忘另一处 | 词表口径曾在 5 处并存（1601 / 2,795 / 3,585 / 3,686），且废弃口径后来又藏进 `.mcp.json` 与 server instructions（现在 `.md` 与 `.py`/`.json` 双扫描）；荧光图例写"三种色"而表里只有 2 行；"必答 3 问"下实列 5 条；黑名单到 W11 而正文引用只到 W10、reference 只到 W10；弃用工具 `export_article_docx` 又冒回 MCP 工具表；阈值/导出前缀被抄成多份副本 |
 | `test_blueprint_contract.py` | 出题分布静默跑偏 | 文档承诺 Q1 写作手法 30% / Q2 词义 70% / Q4 推断 20% / Q3 抽中 I-08 转 M-03 / 带标题时 Q5 不出 best title / 双 I-08 角点约 0.05% —— 全部按种子扫描核对 |
-| `test_validator_contract.py` | 校验器误报与虚假兜底 | `shows` 内含 `how` 导致 O-02 模板必刷"缺问号"噪音；排序题事件行必须 ①②③④ 分行；**校验器不检查答案分布**（特征化断言，防止将来实现了却忘记改文档） |
+| `test_validator_contract.py` | 校验器误报与虚假兜底 | `shows` 内含 `how` 导致 O-02 模板必刷"缺问号"噪音；排序题事件行必须 ①②③④ 分行（缺失曾是纯提示、all_pass 照常放行，现为门禁项）；选项数超出 option_count 曾 IndexError 崩溃（现退化为可读 issue）；**校验器不检查答案分布**（特征化断言，防止将来实现了却忘记改文档） |
 | `test_gate_contract.py` | 漏步导出 / 改文后仍放行 / 档位漏问 | 未抽蓝图、未过 validate、正文漏注释都要拦；新增**正文内容指纹**：改英文内容后必须重跑 check_passage，只增删中文注释不算改（否则会拦死"注释最后一步加"的合规流程）；新增**档位门禁**：档位只认 `workflow_init(level=...)` 显式登记（check_passage 不得顺手用自己的 default 登记），未登记时 check_passage 拒跑、题目导出与报告导出都拦，登记档位与实跑档位不一致也拦 |
-| `test_export_contract.py` | 文案改动让调用方静默失效 | 曾用 `startswith("文档已保存")` 判断成功再记工作流状态，改一个字就让门禁形同虚设；现在判定集中在 `exporter.is_export_ok`，并校验苹方-简字体与 eastAsia 中文字体 |
+| `test_export_contract.py` | 文案改动让调用方静默失效 | 曾用 `startswith("文档已保存")` 判断成功再记工作流状态，改一个字就让门禁形同虚设；现在判定集中在 `exporter.is_export_ok`，并校验苹方-简字体与 eastAsia 中文字体；**首行缩进双写**也在锁内（v1.0.59 曾把缩进赋值行删掉、正文全顶格，当时只查字体没拦住） |
+| `test_checker_contract.py` | 指标口径漂移让硬门槛失效 | `word_count` 曾用 `token_occurrences`（专名不计入）：320 词含 40 个专名只报 280，高专名浓度的稿子能绕过「全文 ≤350 词」硬门槛（现按实词词元出现次数计，含专名）；grade_check 与 metrics 的句均曾是两套算法（现同源于 `_sentence_metrics`） |
 | `test_append_tool_contract.py` | XML 属性写了、渲染端不认 | 首行缩进只写绝对值 `w:firstLine`，WPS 等中文渲染器优先认字符制 → 用户端「没有首行缩进」（现 `firstLineChars`+`firstLine` 双写）；`w:shd` 被 `pPr.append()` 排到 `spacing` 之后违反 CT_PPr 次序，乱序 pPr 会被严格渲染器整段丢弃（现按 schema 顺序插入） |
 
 ## 已知差异（有意保留，不是 bug）
@@ -45,7 +46,7 @@ pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
 | 题干引用的词被改稿删掉后查不出 | `validate_questions(..., body=正文)` 新增 `stem_quote_in_body` 检查；不传 body 时行为不变（向后兼容） | `test_validator_contract` |
 | 指纹状态被同目录其他 agent 覆盖 | 状态里存**已校验指纹清单**（`check_fingerprints`，上限 20）而不是单值；任一 agent 校验过的正文都仍有效 | `test_gate_contract::test_fingerprint_list_survives_multiple_agents` |
 | 覆盖率是自证的 | `coverage_range` 同时给出 lenient / strict 两个口径与「靠词缀/词干放宽掉的词」清单（不参与 pass/fail）。实测样例：`actively` 属放宽项 → lenient 0.80 / strict 0.60 | 输出可见；仍不设硬门槛（刻意取舍） |
-| mcp 2.x 下 server 起不来 | 两侧加 `try: FastMCP except: MCPServer as FastMCP` 兼容层；requirements 保留 `mcp>=1.0,<2` 作确定性保险 | `test_doc_consistency::test_mcp_version_compat_layer` |
+| mcp 2.x 下 server 起不来 | 两侧加 `try: FastMCP except: MCPServer as FastMCP` 兼容层；requirements 放开为 `mcp>=1.10`（靠兼容层而非钉版本，见下方诚实清单） | `test_doc_consistency::test_mcp_version_compat_layer` |
 
 ## 还没挂钩的已知缺口（诚实清单）
 

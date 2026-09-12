@@ -66,6 +66,9 @@ def _set_first_line_indent(p, width=None):
     """
     if width is None:
         width = Cm(0.75)
+    # 先写绝对缩进（这一步才会创建 w:ind），再补字符制。新建段落本没有 w:ind，
+    # 只留「已存在才补 firstLineChars」的分支会让两种缩进全部落空（v1.0.59 回归）。
+    p.paragraph_format.first_line_indent = width
     pPr = p._element.get_or_add_pPr()
     ind = pPr.find(qn("w:ind"))
     if ind is not None and ind.get(qn("w:firstLineChars")) is None:

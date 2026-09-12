@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import re
 import zipfile
 import pytest
 
@@ -107,3 +108,7 @@ def test_fonts_and_indent_rules(tmp_path):
         xml = z.read("word/document.xml").decode("utf-8")
     assert "微软雅黑" in xml, "中文字体必须写 rFonts eastAsia=微软雅黑"
     assert "Arial" in xml
+    # 首行缩进必须双写（字符制 + 绝对值）。v1.0.59 曾把赋值行删掉：w:ind 只剩题干悬挂缩进、
+    # 正文全部顶格，而这里当时只断言字体——回归漏网。正文段落必须带 firstLineChars=200。
+    assert xml.count('w:firstLineChars="200"') >= 1, "正文缺少字符制首行缩进 firstLineChars=200（WPS 会顶格）"
+    assert re.search(r'<w:ind [^>]*w:firstLine="\d+"', xml), "正文缺少绝对值首行缩进 w:firstLine"
