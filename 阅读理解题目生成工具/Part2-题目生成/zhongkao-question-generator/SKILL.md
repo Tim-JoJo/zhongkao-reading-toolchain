@@ -299,7 +299,7 @@ mcp__zhongkao-mcp__export_docx(
 
 1. 题目数量、选项数量和答案与对话中输出的一致。
 2. 正文用**带中文注释版**（与 Part1 交付的正文一致，含 `theory（理论）` 等注释）；不得传无注释正文导致注释丢失。Part1 不再单独导出纯文章 Word，题目 Word 即承载正文的唯一导出文档。
-3. `stem` 字段**不带数字标号**（导出器自动编号，避免 `1. 1.` 重复）；排序题（Q4）stem 内先用 ①/②/③/④ 列出事件（每事件一行）。
+3. `stem` 字段**不带数字标号**（导出器自动编号，避免 `1. 1.` 重复）；排序题（Q4）stem 内先用 ①/②/③/④ 列出事件（每事件一行）。**这是校验门禁项**：事件行缺失时 `validate_questions` 判 `review_required`（`ordering_events`）、`all_pass=false`，导出被拦（旧式 a./b./c./d. 写法同样被拦）。
 4. 选项字母和标点正确（A. / B. / C. / D.），题干结尾有问号。**排序题（Q4）例外**：stem 以 ①/②/③/④ 事件清单结尾，在清单前用一句问句引出（如 `Which is the correct order of the following events?`），事件清单本身不以问号结尾。validator 对 `type == "ordering"` 的题只检查 ①/② 事件清单是否齐全，不因清单结尾缺问号报错。
 
 > **问号提示的由来（已于 2026-09 修复）**：缺问号检查历史上用 `"how" in stem.lower()` 做子串判断，`shows` 内含 `how`，导致 O-02 模板 `Which of the following shows the correct order…?` 必然误报「题干可能缺少问号」。现已改为词边界匹配 `\b(how|why)\b`（`hook/test_validator_contract.py` 锁住该行为）。排序题按本节格式（清单前一句问句 + 事件清单结尾）即可，不必为提示改动题干。
