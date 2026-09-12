@@ -9,15 +9,9 @@ from typing import Any
 import sys
 from pathlib import Path
 
-_VOCAB_CHECKER_DIR = None
-for _candidate in (
-    Path(__file__).resolve().parent.parent.parent / "vocab-checker",
-    Path(__file__).resolve().parent.parent.parent.parent / "Part1-文章改写" / "vocab-checker",
-):
-    if _candidate.exists():
-        _VOCAB_CHECKER_DIR = str(_candidate)
-        break
-if _VOCAB_CHECKER_DIR is None:
+# src 的上三级即 Part1-文章改写，vocab-checker 与之平级
+_VOCAB_CHECKER_DIR = str(Path(__file__).resolve().parent.parent.parent / "vocab-checker")
+if not Path(_VOCAB_CHECKER_DIR).exists():
     raise FileNotFoundError("找不到 vocab-checker 目录")
 if _VOCAB_CHECKER_DIR not in sys.path:
     sys.path.insert(0, _VOCAB_CHECKER_DIR)
@@ -38,12 +32,7 @@ def _get_checker() -> VocabChecker:
 
 # ── 文本分析 ──
 
-WORD_RE = re.compile(r"[A-Za-z]+(?:[''][A-Za-z]+)?")
 SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])(?:['\")\\]*)\s+")
-
-
-def _tokenize(text: str) -> list[str]:
-    return WORD_RE.findall(text)
 
 
 def _split_sentences(text: str) -> list[str]:
@@ -52,10 +41,6 @@ def _split_sentences(text: str) -> list[str]:
         return []
     parts = [p.strip() for p in SENTENCE_SPLIT_RE.split(cleaned) if p.strip()]
     return parts or [cleaned]
-
-
-def _word_count(text: str) -> int:
-    return len(_tokenize(text))
 
 
 def _sentence_metrics(doc) -> dict[str, Any]:

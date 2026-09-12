@@ -67,6 +67,7 @@ def _style(p, shade=None, indent=False):
     pf.space_after = Pt(0)
     pf.space_before = Pt(0)
     pPr = p._element.get_or_add_pPr()
+    # 上面三个 setter 均经 get_or_add_spacing 创建 w:spacing 元素，故 find 必非 None
     spacing = pPr.find(qn("w:spacing"))
     if shade:
         shd = OxmlElement("w:shd")
@@ -75,10 +76,7 @@ def _style(p, shade=None, indent=False):
         shd.set(qn("w:fill"), shade)
         # CT_PPr 子元素有固定次序：shd 必须在 spacing 之前。append 会把它排到
         # spacing 后面，严格的渲染器（Word/WPS）会视 pPr 为非法并丢弃整段格式。
-        if spacing is not None:
-            spacing.addprevious(shd)
-        else:
-            pPr.append(shd)
+        spacing.addprevious(shd)
     if indent:
         ind = OxmlElement("w:ind")
         # firstLineChars（字符制）是 Word/WPS 中文排版的优先口径，显示为「首行缩进 2 字符」；
@@ -86,10 +84,7 @@ def _style(p, shade=None, indent=False):
         ind.set(qn("w:firstLineChars"), INDENT_CHARS)
         ind.set(qn("w:firstLine"), INDENT)
         # ind 在 CT_PPr 里紧跟 spacing，同样不能乱插
-        if spacing is not None:
-            spacing.addnext(ind)
-        else:
-            pPr.append(ind)
+        spacing.addnext(ind)
 
 
 def add_para(doc, text, shade=None, bold=False, indent=False):
@@ -129,11 +124,11 @@ def add_wordbank(doc, words):
     r = cp.add_run(words); set_fonts(r)
 
 
-def add_bar(doc, n=BAR):
+def add_bar(doc):
     """阅读问答答案横线：一整行下划线。"""
     p = doc.add_paragraph()
     _style(p)
-    r = p.add_run("_" * n); set_fonts(r)
+    r = p.add_run("_" * BAR); set_fonts(r)
 
 
 def append_from_spec(docx_path, spec):
@@ -214,13 +209,13 @@ def interactive():
         print("错误：找不到文件:", path)
         return
     print("题型：1=选词填空 2=7选5 3=语法填空 4=首字母填空 5=阅读问答 6=阅读单选")
-    qtype_map = {1: "选词填空", 2: "7选5", 3: "语法填空",
-                 4: "首字母填空", 5: "阅读问答", 6: "阅读单选"}
+    # 题型清单唯一来源是 TYPE_TITLE（键序即菜单序），此处按序枚举，勿再手抄一份
+    qtype_map = {str(i): k for i, k in enumerate(TYPE_TITLE, 1)}
     t = input("选择（1-6）：").strip()
-    if t not in ("1", "2", "3", "4", "5", "6"):
+    if t not in qtype_map:
         print("错误：请输入 1-6 的数字")
         return
-    qtype = qtype_map[int(t)]
+    qtype = qtype_map[t]
 
     spec = {"type": qtype}
     inst = input("题干指令（无则回车）：").strip()

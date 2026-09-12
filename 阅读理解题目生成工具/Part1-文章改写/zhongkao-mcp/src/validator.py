@@ -13,19 +13,10 @@
 from __future__ import annotations
 
 import re
-import statistics
 from typing import Any
 
 
 OPTION_LETTERS = {3: ["A", "B", "C"], 4: ["A", "B", "C", "D"]}
-
-RECOMMENDED_TYPES = {
-    "writing_technique",     # Q1 写作手法·开篇引入（30%）或 detail（70%）替代
-    "vocabulary_or_detail",  # Q2 词义猜测 or 细节理解
-    "inference",             # Q3 逻辑推断
-    "ordering",              # Q4 排序·事件顺序
-    "main_idea",             # Q5 主旨/标题/目的
-}
 
 ABSOLUTE_PATTERNS = [
     r"\ball\b", r"\bnever\b", r"\balways\b", r"\bonly\b",
@@ -76,8 +67,7 @@ def run_validate_questions(
             # 用词边界匹配：旧写法 "how" in stem.lower() 会被 "shows" 里的 how 命中，
             # 导致 O-02 模板（Which of the following shows the correct order…?）必然误报。
             if re.search(r"\b(?:why|how)\b", stem, re.IGNORECASE) or "best title" in stem.lower():
-                if not stem.strip().endswith(("?", "？")):
-                    issues.append(f"题{qid}：题干可能缺少问号")
+                issues.append(f"题{qid}：题干可能缺少问号")
     checks["option_format"] = "pass" if format_ok else "fail"
 
     # ── 检查 1b: 题干格式防错（咨询性，不影响 all_pass）──
@@ -161,8 +151,9 @@ def run_validate_questions(
                 continue
             opt_clean = re.sub(r"^[A-D]\.\s*", "", opt.strip())
             for pat in ABSOLUTE_PATTERNS:
-                if re.search(pat, opt_clean, re.IGNORECASE):
-                    issues.append(f"题{qid} 干扰项 {letters[i]} 含绝对词 '{re.search(pat, opt_clean, re.IGNORECASE).group()}'，可能泄露")
+                m = re.search(pat, opt_clean, re.IGNORECASE)
+                if m:
+                    issues.append(f"题{qid} 干扰项 {letters[i]} 含绝对词 '{m.group()}'，可能泄露")
                     leak_ok = False
     checks["absolute_word_leak"] = "pass" if leak_ok else "review_required"
 

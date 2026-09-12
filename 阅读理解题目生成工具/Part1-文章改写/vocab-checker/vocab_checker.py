@@ -169,6 +169,18 @@ def _parse_number_section(text: str, section_name: str) -> Set[str]:
 # 第二部分：生词检查器
 # ============================================================
 
+def unknown_word_frequency(unknown_details: List[dict]) -> List[Tuple[str, int]]:
+    """超纲词频次表：按 unknown_details 发现序计数，再按频次降序稳定排序。
+
+    check_article 与 vocab-checker/mcp_server.py 的 check_text 共用同一实现，
+    避免两处各抄一份统计逻辑后漂移。
+    """
+    freq: Dict[str, int] = {}
+    for d in unknown_details:
+        freq[d["word"]] = freq.get(d["word"], 0) + 1
+    return sorted(freq.items(), key=lambda x: -x[1])
+
+
 class VocabChecker:
     """初中英语生词检查器。
 
@@ -558,10 +570,7 @@ class VocabChecker:
         result = self.check(full_text, proper_names=proper_names)
 
         # 超纲词频次统计
-        freq: Dict[str, int] = {}
-        for d in result["unknown_details"]:
-            freq[d["word"]] = freq.get(d["word"], 0) + 1
-        result["word_frequency"] = sorted(freq.items(), key=lambda x: -x[1])
+        result["word_frequency"] = unknown_word_frequency(result["unknown_details"])
 
         return result
 

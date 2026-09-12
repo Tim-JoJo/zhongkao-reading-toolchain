@@ -8,13 +8,10 @@ from __future__ import annotations
 import pathlib
 import sys
 
-import pytest
-
 REPO = pathlib.Path(__file__).resolve().parent.parent
 GEN = REPO / "阅读理解题目生成工具"
 P1 = GEN / "Part1-文章改写"
 MCP = P1 / "zhongkao-mcp"
-SRC = MCP / "src"
 AW = P1 / "zhongkao-article-writer/SKILL.md"
 QG = GEN / "Part2-题目生成/zhongkao-question-generator/SKILL.md"
 RC = GEN / "Part2-题目生成/rc-question-writing/SKILL.md"
@@ -39,13 +36,3 @@ KNOWN_DIVERGENCES: dict[str, str] = {}
 for _p in (MCP, P1 / "vocab-checker", P1):
     if str(_p) not in sys.path:
         sys.path.insert(0, str(_p))
-
-
-@pytest.fixture(scope="session")
-def mcp_dir():
-    return MCP
-
-
-@pytest.fixture(scope="session")
-def gen_dir():
-    return GEN
