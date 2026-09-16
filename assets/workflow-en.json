@@ -1,0 +1,218 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Zhongkao English Reading · AI Item-Writing Workflow",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "output": "assets/workflow-en.html"
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "Main chain · Generator"
+    },
+    {
+      "id": "support",
+      "label": "Knowledge bases · Appender"
+    }
+  ],
+  "phases": [
+    {
+      "id": "source",
+      "label": "Source",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "part1",
+      "label": "Part 1 · Rewrite",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "part2",
+      "label": "Part 2 · Items",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "deliver",
+      "label": "Deliver",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "src",
+    "rewrite",
+    "metrics",
+    "items",
+    "validate",
+    "export"
+  ],
+  "nodes": [
+    {
+      "id": "src",
+      "lane": "main",
+      "col": 0,
+      "type": "external",
+      "label": "Source article",
+      "sublabel": "English · news · science",
+      "width": 128
+    },
+    {
+      "id": "rewrite",
+      "lane": "main",
+      "col": 1,
+      "type": "backend",
+      "label": "Rewrite passage",
+      "sublabel": "facts → original prose",
+      "width": 132
+    },
+    {
+      "id": "metrics",
+      "lane": "main",
+      "col": 2,
+      "type": "security",
+      "label": "Metric gate",
+      "sublabel": "≤350 w · 95–97% coverage",
+      "tag": "check_passage",
+      "width": 136
+    },
+    {
+      "id": "items",
+      "lane": "main",
+      "col": 3,
+      "type": "backend",
+      "label": "5-item blueprint",
+      "sublabel": "5 types · craft to gist",
+      "width": 136
+    },
+    {
+      "id": "validate",
+      "lane": "main",
+      "col": 4,
+      "type": "security",
+      "label": "Item validation",
+      "sublabel": "unique key · ①② lines",
+      "tag": "validate_questions",
+      "width": 136
+    },
+    {
+      "id": "export",
+      "lane": "main",
+      "col": 5,
+      "type": "frontend",
+      "label": "Export exam DOCX",
+      "sublabel": "gate: no skipped steps",
+      "width": 132
+    },
+    {
+      "id": "vocab",
+      "lane": "support",
+      "col": 2,
+      "type": "database",
+      "label": "Curriculum vocab",
+      "sublabel": "3,686 matchable forms",
+      "width": 128
+    },
+    {
+      "id": "rules",
+      "lane": "support",
+      "col": 3,
+      "type": "database",
+      "label": "Stem library",
+      "sublabel": "past-paper stems",
+      "width": 128
+    },
+    {
+      "id": "append",
+      "lane": "support",
+      "col": 5,
+      "type": "backend",
+      "label": "Append Part-II items",
+      "sublabel": "cloze · 5-of-7 → paper",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-source",
+      "from": "src",
+      "to": "rewrite",
+      "label": "source",
+      "variant": "default",
+      "role": "main"
+    },
+    {
+      "id": "e-draft",
+      "from": "rewrite",
+      "to": "metrics",
+      "label": "draft",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-metrics-ok",
+      "from": "metrics",
+      "to": "items",
+      "label": "metrics pass",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-items",
+      "from": "items",
+      "to": "validate",
+      "label": "items",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-validate-ok",
+      "from": "validate",
+      "to": "export",
+      "label": "all_pass",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-vocab",
+      "from": "vocab",
+      "to": "metrics",
+      "label": "lemma check",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e-rules",
+      "from": "rules",
+      "to": "items",
+      "label": "stems",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e-append",
+      "from": "export",
+      "to": "append",
+      "label": "exam DOCX",
+      "variant": "default",
+      "role": "main"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Quality contract",
+      "items": [
+        "Five machine gates: metrics / verbatim / blueprint / validation / export — any failure blocks",
+        "Cross-session state machine: content fingerprint · level registration · rejects skipped steps",
+        "275 public-source samples all passed · 69 regression locks"
+      ]
+    }
+  ]
+}

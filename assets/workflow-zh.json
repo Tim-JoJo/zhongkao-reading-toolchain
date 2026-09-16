@@ -1,0 +1,218 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "中考英语阅读 AI 命题工作链",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "assets/workflow-zh.html"
+  },
+  "lanes": [
+    {
+      "id": "main",
+      "label": "命题主链 · 生成工具"
+    },
+    {
+      "id": "support",
+      "label": "知识库 · 追加工具"
+    }
+  ],
+  "phases": [
+    {
+      "id": "source",
+      "label": "取材",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "part1",
+      "label": "Part 1 · 文章改写",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "emphasis"
+    },
+    {
+      "id": "part2",
+      "label": "Part 2 · 题目生成",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "deliver",
+      "label": "交付",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "src",
+    "rewrite",
+    "metrics",
+    "items",
+    "validate",
+    "export"
+  ],
+  "nodes": [
+    {
+      "id": "src",
+      "lane": "main",
+      "col": 0,
+      "type": "external",
+      "label": "英文外刊素材",
+      "sublabel": "新闻 · 科普 · 记叙",
+      "width": 128
+    },
+    {
+      "id": "rewrite",
+      "lane": "main",
+      "col": 1,
+      "type": "backend",
+      "label": "文章改写",
+      "sublabel": "事实提取 → 原创撰写",
+      "width": 132
+    },
+    {
+      "id": "metrics",
+      "lane": "main",
+      "col": 2,
+      "type": "security",
+      "label": "指标门禁",
+      "sublabel": "≤350 词 · 覆盖率 95–97%",
+      "tag": "check_passage",
+      "width": 136
+    },
+    {
+      "id": "items",
+      "lane": "main",
+      "col": 3,
+      "type": "backend",
+      "label": "五题蓝图命题",
+      "sublabel": "手法·词义·推理·排序·主旨",
+      "width": 136
+    },
+    {
+      "id": "validate",
+      "lane": "main",
+      "col": 4,
+      "type": "security",
+      "label": "题目校验",
+      "sublabel": "答案唯一 · ①② 事件行",
+      "tag": "validate_questions",
+      "width": 136
+    },
+    {
+      "id": "export",
+      "lane": "main",
+      "col": 5,
+      "type": "frontend",
+      "label": "题目 Word 导出",
+      "sublabel": "状态机门禁 · 缺步拒导",
+      "width": 132
+    },
+    {
+      "id": "vocab",
+      "lane": "support",
+      "col": 2,
+      "type": "database",
+      "label": "课标词表",
+      "sublabel": "3,686 可匹配词形",
+      "width": 128
+    },
+    {
+      "id": "rules",
+      "lane": "support",
+      "col": 3,
+      "type": "database",
+      "label": "题型与句式库",
+      "sublabel": "真题题干模板",
+      "width": 128
+    },
+    {
+      "id": "append",
+      "lane": "support",
+      "col": 5,
+      "type": "backend",
+      "label": "二卷题型追加",
+      "sublabel": "选词填空 · 7选5 → 成品",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-source",
+      "from": "src",
+      "to": "rewrite",
+      "label": "取材",
+      "variant": "default",
+      "role": "main"
+    },
+    {
+      "id": "e-draft",
+      "from": "rewrite",
+      "to": "metrics",
+      "label": "无注释正文",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-metrics-ok",
+      "from": "metrics",
+      "to": "items",
+      "label": "指标全过",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-items",
+      "from": "items",
+      "to": "validate",
+      "label": "题组 + 正文",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-validate-ok",
+      "from": "validate",
+      "to": "export",
+      "label": "all_pass",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e-vocab",
+      "from": "vocab",
+      "to": "metrics",
+      "label": "逐词核查",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e-rules",
+      "from": "rules",
+      "to": "items",
+      "label": "套用句式",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e-append",
+      "from": "export",
+      "to": "append",
+      "label": "题目 Word",
+      "variant": "default",
+      "role": "main"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "质量契约",
+      "items": [
+        "五道机器门禁：指标 / 原句 / 蓝图 / 校验 / 导出，任一不过即拦截",
+        "跨会话工作流状态机：正文指纹 · 档位登记 · 缺步拒导",
+        "275 篇公开素材样例全部过门禁 · 69 项回归锁"
+      ]
+    }
+  ]
+}
