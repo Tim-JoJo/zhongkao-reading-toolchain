@@ -34,11 +34,13 @@ python 阅读理解题目追加工具.py --interactive
 
 按提示输入 docx 路径、题型、题干、短文、答案等。
 
-### 方式 3：生成 spec 示例
+### 方式 3：输出 spec 示例
 
 ```bash
-python 阅读理解题目追加工具.py --example
+python 阅读理解题目追加工具.py --example > spec示例.json
 ```
+
+示例内容直接输出到屏幕，重定向即可保存为文件（工具目录本身也随附一份 `spec示例.json`）。
 
 ### 帮助
 

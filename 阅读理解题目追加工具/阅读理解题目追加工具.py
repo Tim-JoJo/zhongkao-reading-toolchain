@@ -14,7 +14,7 @@
 用法：
   python 阅读理解题目追加工具.py                                  # 交互式向导
   python 阅读理解题目追加工具.py <docx路径> <spec.json>            # 按 spec 追加
-  python 阅读理解题目追加工具.py --example                        # 生成 spec 示例
+  python 阅读理解题目追加工具.py --example > spec示例.json       # 输出 spec 示例（重定向保存）
   python 阅读理解题目追加工具.py --help
 
 spec.json 字段说明（均可省略，省略则跳过对应部分）：
@@ -284,9 +284,10 @@ def write_example():
         "details": ["16．通读全文可知，选项B概括最全面准确。",
                     "17．根据第二段中关于嗅觉的描述，可知是嗅觉。"],
     }
-    with open("spec示例.json", "w", encoding="utf-8") as f:
-        json.dump(ex, f, ensure_ascii=False, indent=2)
-    print("已生成 spec示例.json，请参考后填写自己的题目内容。")
+    # 只输出、不落盘：示例内容走 stdout（重定向即可保存），提示走 stderr 不污染重定向结果；
+    # 工具目录已随仓库分发 spec示例.json，这里不再往运行目录写文件，也避免覆盖用户改过的示例。
+    print(json.dumps(ex, ensure_ascii=False, indent=2))
+    print("（以上为 spec 示例；保存：python 阅读理解题目追加工具.py --example > spec示例.json）", file=sys.stderr)
 
 
 def main():
