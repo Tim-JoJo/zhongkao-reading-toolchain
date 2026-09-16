@@ -27,9 +27,7 @@
 
 ## 工作流
 
-<p align="center"><img src="assets/workflow-zh.png" alt="中考英语阅读 AI 命题工作链工作流图" width="100%"></p>
-
-> 英文版：[workflow-en.png](assets/workflow-en.png)。交互版（可缩放、追踪路径、切换明暗主题）：[中文](assets/workflow-zh.html) · [English](assets/workflow-en.html)，下载后用浏览器打开；图源规格见 `assets/workflow-*.json`（[archify](https://github.com/tt-a1i/archify) workflow v2）。
+<p align="center"><img src="assets/workflow-zh.svg" alt="中考英语阅读 AI 命题工作链工作流图" width="100%"></p>
 
 ## 工具一览
 

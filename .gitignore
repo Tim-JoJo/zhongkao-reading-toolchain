@@ -5,7 +5,6 @@ __pycache__/
 
 # 浏览器抓取工作数据(爬取过程产物,不入库)
 *.html
-!assets/*.html
 _*.json
 _*.txt
 
