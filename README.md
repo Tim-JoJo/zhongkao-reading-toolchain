@@ -29,20 +29,7 @@
 
 <p align="center"><img src="assets/workflow-zh.png" alt="中考英语阅读 AI 命题工作链工作流图" width="100%"></p>
 
-> 交互版（可缩放、追踪路径、切换明暗主题）：[中文](assets/workflow-zh.html) · [English](assets/workflow-en.html) —— 下载后用浏览器打开；图源规格见 `assets/workflow-*.json`（[archify](https://github.com/tt-a1i/archify) workflow v2）。
-
-```mermaid
-flowchart LR
-    A[英文文章<br/>新闻 / 科普 / 记叙文] --> B[① 生成工具]
-    B --> B1[文章改写<br/>词数 ≤350 · 课标词表核查]
-    B1 --> B2[五题蓝图<br/>写作手法/词义/推理/排序/主旨]
-    B2 --> C[② 追加工具]
-    C --> C1[二卷配套题型<br/>选词填空 · 7选5 · 语法填空 等]
-    C1 --> D[Word 成品<br/>排版 + Answer Key + 逐题解析]
-    B1 -.->|不达标| X1[check_passage 拦截]
-    B2 -.->|校验不过| X2[validate_questions 拦截]
-    D -.->|缺硬性步骤| X3[工作流门禁拒导]
-```
+> 英文版：[workflow-en.png](assets/workflow-en.png)。交互版（可缩放、追踪路径、切换明暗主题）：[中文](assets/workflow-zh.html) · [English](assets/workflow-en.html)，下载后用浏览器打开；图源规格见 `assets/workflow-*.json`（[archify](https://github.com/tt-a1i/archify) workflow v2）。
 
 ## 工具一览
 
