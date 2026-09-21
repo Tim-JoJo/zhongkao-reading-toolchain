@@ -6,6 +6,8 @@
   2. 排序题事件行必须 ①/②③④ 分行（写成 a./b. 或挤在一行会被挡）
   3. **校验器不检查答案分布** —— 该类倾斜没有机器兜底，只能靠 SKILL 的修正步骤；
      本 hook 把这个"没有兜底"的事实钉住，谁将来实现了分布校验，这里会立刻变红提醒改文档
+  4. 正确项照抄原文 / 只改时态的微改（adds→added）无机器兜底 → `answer_copy_leak`（2026-09-21）
+  5. 正确项显著最长、"全选最长"即可得分 → `answer_length_tell`（2026-09-21）
 """
 from __future__ import annotations
 
@@ -163,3 +165,108 @@ def test_evidence_paragraph_absent_is_backward_compatible():
     r = run_validate_questions(qs, 4)
     assert "evidence_paragraph_order" not in r["checks"]
     assert r["all_pass"] is True
+
+
+# ── 正确项防照抄（answer_copy_leak）+ 正确项最长泄题（answer_length_tell），2026-09-21 ──
+# 真实踩坑：原文 "Robert Plutchik adds trust and looking forward to the list"，
+# 正确项写 "Plutchik added trust and looking forward to the list"（只改 adds→added）也算照抄；
+# 且批量生产中多次出现"正确项最长、学生全选最长即可得分"。
+
+EKMAN_BODY = ("Paul Ekman lists joy, sadness, anger, fear, disgust, and surprise, and "
+              "Robert Plutchik adds trust and looking forward to the list.")
+
+
+def _plutchik_q(correct_text, answer="B"):
+    opts = ["A. Ekman and Plutchik worked together.", correct_text,
+            "C. Ekman studied animals only.", "D. Plutchik disagreed with Ekman."]
+    return {"id": 1, "stem": "Which of the following is TRUE according to the passage?",
+            "options": opts, "answer": answer, "type": "detail"}
+
+
+def test_tense_only_rewording_still_counts_as_copy():
+    """只改时态（adds→added）必须命中 answer_copy_leak——用户的原始投诉案例。"""
+    bad = _plutchik_q("B. Plutchik added trust and looking forward to the list.")
+    r = run_validate_questions([bad], 4, False, EKMAN_BODY)
+    assert r["checks"]["answer_copy_leak"] == "review_required", r
+    assert any("照抄" in i and "trust and looking forward" in i for i in r["issues"]), r["issues"]
+    assert r["all_pass"] is False
+
+
+def test_genuine_paraphrase_passes_copy_check():
+    """合格转述（合并概括成比较结论）必须放行。"""
+    good = _plutchik_q("B. Plutchik listed more emotions than Ekman.")
+    r = run_validate_questions([good], 4, False, EKMAN_BODY)
+    assert r["checks"]["answer_copy_leak"] == "pass", r["issues"]
+
+
+def test_short_option_full_copy_is_flagged_but_partial_is_not():
+    """<5 词的选项：整条逐字出现才命中；部分重合不命中。"""
+    body = "The team went to the sea to study sea life in deep water."
+    full = {"id": 1, "stem": "Why did the team go to the sea?",
+            "options": ["A. To study sea life", "B. To find gold coins",
+                        "C. To test new boats", "D. To take a holiday"],
+            "answer": "A", "type": "detail"}
+    r_full = run_validate_questions([full], 4, False, body)
+    assert r_full["checks"]["answer_copy_leak"] == "review_required", r_full
+
+    partial = {"id": 1, "stem": "Why did the team go to the sea?",
+               "options": ["A. To study ocean animals", "B. To find gold coins",
+                           "C. To test new boats", "D. To take a holiday"],
+               "answer": "A", "type": "detail"}
+    r_partial = run_validate_questions([partial], 4, False, body)
+    assert r_partial["checks"]["answer_copy_leak"] == "pass", r_partial["issues"]
+
+
+def test_vocab_and_reference_questions_get_advisory_only():
+    """词义/指代题正确项允许引用原文短语（真题惯例）：不拦截，只出咨询提示。"""
+    ref = {"id": 1, "stem": 'What does the underlined word "them" refer to?',
+           "options": ["A. The tube worms near the hot vents", "B. The robots",
+                       "C. The maps", "D. The ships"],
+           "answer": "A", "type": "vocabulary_or_detail"}
+    body = "The team studied the tube worms near the hot vents and mapped them."
+    r = run_validate_questions([ref], 4, False, body)
+    assert r["checks"]["answer_copy_leak"] == "pass", r
+    assert any("词义/指代题" in i for i in r["issues"]), r["issues"]
+
+
+def test_copy_check_requires_body_and_full_set_stays_green():
+    """不传 body 不新增检查（向后兼容）；全转述题组带 body 也全绿。"""
+    r_no_body = run_validate_questions(_full5_with_paras(), 4)
+    assert "answer_copy_leak" not in r_no_body["checks"]
+    assert "answer_length_tell" in r_no_body["checks"]   # 长度泄题检查不依赖 body，始终开启
+
+    body = ("The team sent robots through the early stages of the dive and found tube worms. "
+            "Students should keep a regular bedtime to help the brain store facts.")
+    r = run_validate_questions(_full5_with_paras(), 4, False, body)
+    assert r["checks"]["answer_copy_leak"] == "pass", r["issues"]
+    assert r["all_pass"] is True, r["issues"]
+
+
+def test_clear_longest_tell_is_flagged_per_question():
+    """正确项明显长于次长选项（≥1.2× 且 ≥8 字符）→ review_required。"""
+    import copy
+    qs = _full5_with_paras()
+    qs[2]["options"] = [
+        "A. A fixed bedtime may help teenagers fall asleep faster and sleep much longer every night.",
+        "B. Phones are banned at school.", "C. Teenagers sleep more than adults.",
+        "D. Pills work better than habits."]
+    r = run_validate_questions(qs, 4)
+    assert r["checks"]["answer_length_tell"] == "review_required", r
+    assert any("选最长就得分" in i for i in r["issues"]), r["issues"]
+    assert r["all_pass"] is False
+
+
+def test_set_level_longest_tell_three_questions_flagged():
+    """≥3 题正确项均为唯一最长 → 题组级泄题（每题只长一点、合起来是规律）。"""
+    import copy
+    qs = _full5_with_paras()
+    qs[1]["options"] = ["A. Steps in doing something", "B. Steps of a process", "C. Costs", "D. Names"]
+    qs[2]["options"] = [
+        "A. A fixed and regular bedtime may help.", "B. Phones are banned at school.",
+        "C. Teenagers sleep more than adults.", "D. Pills work better than habits."]
+    # Q5 的 D 本就是唯一最长（33 vs 26，差 7，不到单题硬判线）
+    r = run_validate_questions(qs, 4)
+    assert r["checks"]["balanced_options"] == "pass", r["issues"]   # 三题都没到单题硬判线
+    assert r["checks"]["answer_length_tell"] == "review_required", r
+    assert any("题组级长度泄题" in i for i in r["issues"]), r["issues"]
+    assert r["all_pass"] is False

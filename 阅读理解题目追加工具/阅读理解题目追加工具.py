@@ -263,6 +263,9 @@ def interactive():
 
 
 def write_example():
+    # 示例同时示范两条命题质量红线（与 Part2 validator 口径一致）：
+    #   1. 正确项是转述/概括，不照抄原文（只改时态、单复数也算照抄）；
+    #   2. 四个选项信息量与长度尽量一致，正确项不得显著最长（防止"全选最长"泄题）。
     ex = {
         "type": "阅读单选",
         "instruction": "",
@@ -272,16 +275,16 @@ def write_example():
         ],
         "questions": [
             {"stem": "16．What is the main idea of the passage?",
-             "options": ["A．The five senses are not very important.",
-                         "B．The five senses help us enjoy life and deal with stress.",
-                         "C．Only vision and hearing are useful.",
-                         "D．We don’t need our senses in daily life."]},
+             "options": ["A．The five senses make life enjoyable and help us stay calm.",
+                         "B．Sight and hearing matter far more than the other senses.",
+                         "C．The five senses are not very important in our daily life.",
+                         "D．People cannot live a normal life without the five senses."]},
             {"stem": "17．Which sense can warn us of danger like smoke or gas?",
              "options": ["A．Vision.", "B．Hearing.", "C．Taste.", "D．Smell."]},
         ],
-        "answers": "16．B　17．D",
+        "answers": "16．A　17．D",
         "summary": "本文是一篇说明文，介绍人的五种感官各自的功能，说明感官丰富我们的生活，还可以帮助我们缓解压力。",
-        "details": ["16．通读全文可知，选项B概括最全面准确。",
+        "details": ["16．通读全文可知，五感让生活更有乐趣、帮助身心放松，选项A概括最全面准确。",
                     "17．根据第二段中关于嗅觉的描述，可知是嗅觉。"],
     }
     # 只输出、不落盘：示例内容走 stdout（重定向即可保存），提示走 stderr 不污染重定向结果；

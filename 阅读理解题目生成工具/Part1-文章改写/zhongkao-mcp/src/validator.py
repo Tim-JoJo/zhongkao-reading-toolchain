@@ -7,6 +7,9 @@
 - 题干无 ask/question mark
 - 选项长度平衡
 - 无 all/never/only 等绝对词泄露
+- 题干引文仍在正文（传 body 时）
+- 正确项照抄原文：正确项与正文连续 ≥5 词逐字重合即 review_required（词义/指代题降为咨询提示）
+- 正确项最长泄题：正确项明显长于次长选项、或一组 ≥3 题正确项均为最长
 - 证据段落单调性（携带 answer_paragraph 时，Qn > Qn+1 即违规）
 - 排序题事件行：stem 须以 ①② 开头逐行列出事件，缺失即 review_required（拦截导出）
 """
@@ -23,6 +26,43 @@ ABSOLUTE_PATTERNS = [
     r"\ball\b", r"\bnever\b", r"\balways\b", r"\bonly\b",
     r"\bnone\b", r"\bevery\b", r"\bno one\b",
 ]
+
+
+def _opt_text(opt: str) -> str:
+    """去掉选项的 A. / A．/ A、 前缀，返回纯选项文本。"""
+    return re.sub(r"^[A-D][.．、]\s*", "", str(opt).strip())
+
+
+def _norm_words(text: str) -> list[str]:
+    """小写化后切词；标点（含全角与中文注释括号）一律替换为空格再切。
+
+    正文是「带中文注释版」（如 theory（理论）），若只按空格切，注释会把
+    前后英文单词粘成一个 token，重合检测会在注释处漏报——先把标点变空格。
+    """
+    return re.sub(r"[^\w\s]+", " ", text.lower()).split()
+
+
+def _longest_common_span(a: list[str], b: list[str]) -> tuple[int, list[str]]:
+    """两个词序列的最长公共连续子串（词组级），返回 (长度, 子串)。"""
+    best_len, best_end = 0, 0
+    prev = [0] * (len(b) + 1)
+    for i, wa in enumerate(a, 1):
+        cur = [0] * (len(b) + 1)
+        for j, wb in enumerate(b, 1):
+            if wa == wb:
+                cur[j] = prev[j - 1] + 1
+                if cur[j] > best_len:
+                    best_len, best_end = cur[j], i
+        prev = cur
+    return (best_len, a[best_end - best_len:best_end]) if best_len else (0, [])
+
+
+def _is_quote_form(stem: str) -> bool:
+    """词义/指代题的正确项允许引用原文短语（真题惯例），照抄检查对其降为咨询提示。"""
+    s = stem.lower()
+    return ("refer to" in s
+            or ("underlined" in s and "mean" in s)
+            or "in this reading" in s)
 
 
 def run_validate_questions(
@@ -134,16 +174,46 @@ def run_validate_questions(
         if article_has_title and "main_idea" not in normalized:
             issues.append("文章已有标题：Q5 已按硬性规则改出推断题，main_idea 不作硬性覆盖（本次题组未含主旨题，属正常）")
 
-    # ── 检查 4: 选项长度平衡 ──
+    # ── 检查 4: 选项长度均衡 ──
+    # 4a 历史双条件（极端失衡）；4b 咨询性提示（偏大但不拦截）；另见检查 4c「正确项最长泄题」。
     balance_ok = True
+    longest_tells: list[tuple[Any, int, int]] = []   # 正确项为唯一最长选项的 (题号, 正确项字符数, 次长字符数)
     for q in questions:
+        qid = q.get("id", "?")
         opts = q.get("options") or []
-        lengths = [len(opt.strip()) for opt in opts]
+        lengths = [len(_opt_text(opt)) for opt in opts]
         if lengths and max(lengths) > 2 * min(lengths) and max(lengths) - min(lengths) > 30:
-            qid = q.get("id", "?")
             issues.append(f"题{qid}：选项长度差异较大 ({min(lengths)}–{max(lengths)}字符)，可能泄露答案")
             balance_ok = False
+        elif len(lengths) >= 2 and max(lengths) - min(lengths) > 15 and max(lengths) > 1.5 * min(lengths):
+            issues.append(f"题{qid}：选项长度差异偏大 ({min(lengths)}–{max(lengths)}字符)，建议扩写短项拉齐（咨询性提示，不拦截）")
+        # 「正确项是唯一最长选项」登记（题目级硬判在下面，这里先收集供题组级判断）
+        answer = str(q.get("answer") or "").strip().upper()
+        if answer in letters and len(lengths) == option_count and len(set(lengths)) > 1:
+            ci = letters.index(answer)
+            rest = [n for i, n in enumerate(lengths) if i != ci]
+            if rest and lengths[ci] > max(rest):
+                longest_tells.append((qid, lengths[ci], max(rest)))
     checks["balanced_options"] = "pass" if balance_ok else "review_required"
+
+    # ── 检查 4c: 正确项最长泄题 ──
+    # 学生不读文「全选最长」就能得分，是批量生产里实测出现过的规律性泄题：
+    # ① 题目级：正确项 ≥1.2× 次长选项且多出 ≥8 字符（明显偏长）；
+    # ② 题组级：≥3 题的正确项都是唯一最长选项（每题看着不明显、合起来就是规律）。
+    tell_hard = False
+    for qid, n_correct, n_second in longest_tells:
+        if n_correct >= 1.2 * n_second and n_correct - n_second >= 8:
+            issues.append(
+                f"题{qid}：正确项 {n_correct} 字符明显长于次长选项 {n_second} 字符——"
+                f"「选最长就得分」泄题，把干扰项扩写到与正确项同等信息量，而不是删短正确项")
+            tell_hard = True
+    if len(longest_tells) >= 3:
+        detail = "、".join(f"题{qid}({n}>{m})" for qid, n, m in longest_tells)
+        issues.append(
+            f"题组级长度泄题：{len(longest_tells)} 道题的正确项都是最长选项（{detail}）——"
+            f"不读文全选最长即可得分，须扩写干扰项拉平长度")
+        tell_hard = True
+    checks["answer_length_tell"] = "review_required" if tell_hard else "pass"
 
     # ── 检查 5: 绝对词泄露 ──
     leak_ok = True
@@ -182,6 +252,36 @@ def run_validate_questions(
             checks["stem_quote_in_body"] = "review_required"
         else:
             checks["stem_quote_in_body"] = "pass"
+
+    # ── 检查 6b: 正确项照抄原文（仅当传入 body，向后兼容同检查 6）──
+    # 只改时态/单复数的「微改」仍是照抄（原文 adds trust… → 正确项 added trust…），
+    # 等于把答案原文送上门。机器口径：正确项与正文的最长逐字重合 ≥5 词即 review_required；
+    # <5 词的选项须整条逐字出现才计（≥3 词），1-2 词不查（词义题正确项常为单个同义词，撞词属正常）。
+    # 词义/指代题的正确项按真题惯例允许引用原文短语，降为咨询性提示、不拦截。
+    if body is not None:
+        body_words = _norm_words(body)
+        copy_hard = False
+        for q in questions:
+            qid = q.get("id", "?")
+            opts = q.get("options") or []
+            answer = str(q.get("answer") or "").strip().upper()
+            if answer not in letters or letters.index(answer) >= len(opts):
+                continue   # 答案无效由检查 2 报告，这里不重复
+            correct = _opt_text(opts[letters.index(answer)])
+            words = _norm_words(correct)
+            span_len, span = _longest_common_span(words, body_words)
+            if not span_len:
+                continue
+            if _is_quote_form(q.get("stem", "") or ""):
+                if span_len >= 5:
+                    issues.append(f"题{qid}：正确项与正文逐字重合 {span_len} 词：\"{' '.join(span)}\"（词义/指代题允许引原文短语，请人工确认是短语引用而非照抄定义句）")
+                continue
+            if (len(words) >= 5 and span_len >= 5) or (3 <= len(words) < 5 and span_len == len(words)):
+                issues.append(
+                    f"题{qid}：正确项与正文逐字重合 {span_len} 词：\"{' '.join(span)}\"——照抄原文，"
+                    f"须同义转述或概括后重写正确项（只改时态/单复数不算转述）")
+                copy_hard = True
+        checks["answer_copy_leak"] = "review_required" if copy_hard else "pass"
 
     # ── 检查 7: 证据段落单调性（仅当题目携带 answer_paragraph 才参与，向后兼容）──
     # SKILL 第 3 步落点规划要求 Q1<Q2<Q3<Q4<Q5 单调递增；此前只靠命题 agent 自律，
