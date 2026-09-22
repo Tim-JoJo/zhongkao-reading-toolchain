@@ -26,7 +26,7 @@
 |------|------|
 | 题干长度 | ≤ 20 词（不含引文） |
 | 语言难度 | 低于阅读文本一个级别 |
-| 段落指向 | 必须明确（According to paragraph X / In paragraph X） |
+| 段落指向 | 题干不写编号段落（`paragraph 2` 等，行文顺序由题序暗含）；仅首末段可用 `the first paragraph` / `the last paragraph`，全文用 `the passage` / `the story`；段位定位只用于解析引证 |
 | 否定式题干 | ≤ 2 题 / 题组 |
 | 否定词标注 | NOT / EXCEPT 必须全大写或加粗 |
 | 题干禁止 | "According to the passage" 范围过大——全文定位题除外 |
