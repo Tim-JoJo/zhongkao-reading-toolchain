@@ -13,5 +13,10 @@
     "id": 3,
     "prompt": "先用 python 直接验证两个代码行为再出题：① draw_blueprint(article_has_title=true) 多跑几次，确认 Q5 永不抽 M-01 且 type 为 inference；② 确认 position=3 抽中 I-08 时自动转 main_idea/M-03。验证通过后再正式出题。",
     "expected": "按 SKILL.md 的 python 兜底路径 `from src.blueprint import run_draw_blueprint` 直连源码复现规则；验证结果与 SKILL.md 第 3 步描述一致后才进入逐题编写；若发现行为与文档不符，报告差异而不是硬套文档。"
+  },
+  {
+    "id": 4,
+    "prompt": "用下面这篇短文出 5 道中考阅读题（简版，不导 Word）。我之前发现 AI 出的题有两个毛病：一是正确项基本是照抄原文句子，二是正确项总是四个选项里最长的，学生不读文全选最长就能得分。你们这套流程怎么防这两点？出完题请用检查结果说明。",
+    "expected": "按完整流程出题（draw_blueprint → 逐题编写 → validate_questions 传 body）；能指认两道机器门禁：answer_copy_leak（正确项与正文连续 ≥5 词逐字重合即拦，只改时态/单复数不算转述）与 answer_length_tell（正确项明显长于次长选项、或一组 ≥3 题正确项均为最长即拦）；正确项为真正的转述/概括，四个选项长度接近，validate all_pass 后交付。"
   }
 ]

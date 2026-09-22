@@ -262,8 +262,8 @@ python -c "from src.exporter import run_export_docx; ..."
 用户只要求**校验一组已有题目**（双答案/文外常识/格式问题）时，不阅读分析文章、不抽蓝图、不出题、不导出，直接执行轻量流程：
 
 1. 读取题目列表，确认 `stem / options / answer / type` 字段齐全
-2. 调用 `mcp__zhongkao-mcp__validate_questions`（`option_count` 按实际选项数传，3 选项传 3）
-3. 逐题人工核查：证据句能否精确定位、是否存在第二个可答项、干扰项是否依赖文外常识
+2. 调用 `mcp__zhongkao-mcp__validate_questions`（`option_count` 按实际选项数传，3 选项传 3；**能拿到正文原文时必须传 `body=正文`**——否则 `stem_quote_in_body` 与 `answer_copy_leak` 两项检查不参与，照抄原文查不出）
+3. 逐题人工核查：证据句能否精确定位、是否存在第二个可答项、干扰项是否依赖文外常识；机器门禁之外重点核对**正确项是否照抄或明显最长**（`answer_length_tell` 不依赖 body 始终开启；`answer_copy_leak` 对词义/指代题只给咨询提示，须人工确认是短语引用而非照抄定义句）
 4. **态度题锚点核查**：题干含 `the writer` 时，答案引证必须落在**作者本人表述**（叙事/评论/总结句）上；被引述者（专家/教授/受访者）的观点不得作为作者态度题依据——**作者客观报道 ≠ 作者认同**；若考点在被引述者，题干必须点名引述者（`According to X` / `X thinks...`），或改用其他锚点
 5. 输出校验结论：`all_pass` 状态、问题清单及对应修正建议；不生成题目 Word，不抽蓝图
 
