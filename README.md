@@ -8,7 +8,7 @@
 
 由 AI Agent（Claude Code / Claude Desktop 等）配合 MCP Server 驱动 · 纯本地运行
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-PolyForm_NC_1.0.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-6E56CF.svg)](https://modelcontextprotocol.io/)
 [![Agent](https://img.shields.io/badge/Agent-Claude%20Code%20%7C%20Claude%20Desktop-black.svg)](https://claude.ai/)
@@ -117,7 +117,7 @@ MCP 工具表与文档一致 · mcp 1.x/2.x 兼容层 · 阈值与导出成功�
 ```
 zhongkao-reading-toolchain/
 ├── README.md                          ← 本文件
-├── LICENSE                            ← MIT
+├── LICENSE                            ← PolyForm Noncommercial 1.0.0（禁商用）
 ├── 阅读理解题目生成工具/               ← 主工具：文章改写 + 题目生成
 │   ├── CLAUDE.md                      ← 操作硬性约定（开工前必读）
 │   ├── .mcp.json                      ← MCP 配置模板
@@ -159,6 +159,9 @@ zhongkao-reading-toolchain/
 
 ## 许可
 
-MIT License，见 [LICENSE](LICENSE)。
+本项目采用 [PolyForm Noncommercial 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0) 协议，全文见 [LICENSE](LICENSE)。
+
+- **仅限非商业用途**：个人学习、研究、教育及非营利组织使用免费；商业用途（包括销售软件或付费提供服务）需要另行获得作者授权。
+- 软件按"现状"提供，不附任何形式的担保，作者对使用产生的损失不承担责任（详见协议 No Liability 条款）。
 
 > 工具输出为 AI 辅助生成内容，正式用于考试命题或公开发布前须经人工终审。
