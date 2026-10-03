@@ -174,6 +174,8 @@
 
 ## 6. Humanizer 受控清单
 
+> 来源：译编自 [blader/humanizer](https://github.com/blader/humanizer)（MIT License, © 2025 Siqi Chen），按中考英语改写场景增删。
+
 ### 删除或改写
 
 - `stands as / serves as a testament / marks a pivotal moment`
