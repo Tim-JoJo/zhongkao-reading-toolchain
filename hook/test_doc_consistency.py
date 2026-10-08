@@ -54,6 +54,7 @@ def test_vocab_count_single_source_in_code():
     bad = []
     for p in REPO.rglob("*"):
         if (".git" in p.parts or "hook" in p.parts or "__pycache__" in p.parts
+                or ".venv" in p.parts
                 or p.suffix not in (".py", ".json")
                 or p.name.startswith("二级、三级词汇表")):
             continue
@@ -320,7 +321,7 @@ def test_no_stdout_print_in_server_path():
 def test_export_prefix_single_source():
     lit = []
     for p in REPO.rglob("*.py"):
-        if ".git" in p.parts or "hook" in p.parts or p.name == "exporter.py":
+        if ".git" in p.parts or "hook" in p.parts or ".venv" in p.parts or p.name == "exporter.py":
             continue
         if "文档已保存" in p.read_text(encoding="utf-8"):
             lit.append(str(p.relative_to(REPO)))
