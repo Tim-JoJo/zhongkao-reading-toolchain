@@ -21,9 +21,10 @@ from conftest import (AW, DESIGN_LOGIC, GEN, MCP, P1, QG, RC, REPO, REW,
 
 VC_DIR = P1 / "vocab-checker"
 
-# 已废弃、无法复核的词表口径（词表说明区自己会提到它们以作禁止，其余文件一律不得出现）
-FORBIDDEN_VOCAB_NUMBERS = ("1601", "2,795", "3,585", "3,581", "2,795+")
-CURRENT_VOCAB_NUMBERS = ("3686", "3570")
+# 已废弃、无法复核或已被取代的词表口径（词表说明区自己会提到它们以作禁止，其余文件一律不得出现）
+# 3,686 / 3,570 是 2026-10-19 注入 Oxford 3000（A1–B1）补充之前的旧口径
+FORBIDDEN_VOCAB_NUMBERS = ("1601", "2,795", "3,585", "3,581", "2,795+", "3,686", "3686", "3,570", "3570")
+CURRENT_VOCAB_NUMBERS = ("4124", "4005")
 
 
 def md_files():

@@ -1,7 +1,7 @@
 """
 初中英语阅读命题 — 生词检查器
 =================================
-依据：2022版义务教育英语课标二级、三级词汇表（解析后 3,686 个可匹配词形）
+依据：2022版义务教育英语课标二级、三级词汇表 + Oxford 3000（CEFR A1/A2/B1）补充（解析后 4,124 个可匹配词形）
 工具：spaCy 英文词形还原（lemmatization）
 
 功能：
@@ -37,6 +37,8 @@ def parse_vocab_md(md_path: str) -> Set[str]:
       • child (pl. children) → {"child", "children"}
       • ad (=advertisement)  → {"ad", "advertisement"}
       • centre (AmE center)  → {"centre", "center"}
+      • practice (BrE practise) → {"practice", "practise"}
+      • maths (=mathematics, AmE math) → {"maths", "mathematics", "math"}
       • father (dad) *    → {"father", "dad"}
       • ice cream *       → {"ice", "cream", "ice cream"}
       • policeman / policewoman (pl. policemen / policewomen)
@@ -92,12 +94,18 @@ def _parse_vocab_line(line: str) -> Set[str]:
             plural = re.sub(r'^pl\.\s*', '', raw).strip()
             if plural:
                 parts.append(plural)
-        # 2b. 美式拼写: "AmE center" → "center"（先清理 = 和逗号）
-        elif 'AmE' in raw:
-            raw_clean = re.sub(r'^[=,]\s*', '', raw)
-            ame = re.sub(r',?\s*AmE\s*.*$', '', raw_clean).strip()
-            if ame:
-                parts.append(ame)
+        # 2b. 英美拼写对照：标记前后的词形两边都留
+        #     "AmE center" → "center"；"mum AmE mom" → "mum" + "mom"
+        #     "=mathematics, AmE math" → "mathematics" + "math"；"BrE practise" → "practise"
+        elif 'AmE' in raw or 'BrE' in raw:
+            marker = 'AmE' if 'AmE' in raw else 'BrE'
+            pre, _, post = raw.partition(marker)
+            pre = pre.strip('=, ')
+            post = post.strip().rstrip('.')  # "Mr." 的句点按 check() 剥标点口径去掉，剩空则跳过
+            if pre:
+                parts.append(pre)
+            if post:
+                parts.append(post)
         # 2c. 缩写/全称: "=advertisement" → "advertisement"
         elif raw.startswith('='):
             eq = raw[1:].strip()
@@ -286,7 +294,7 @@ class VocabChecker:
     # ── 课标前缀（命题规则手册 1.3） ──
     DERIVATIONAL_PREFIXES = ["un", "re", "dis", "im", "in", "ir", "non"]
 
-    _EXTRA_VOCAB: Set[str] = set()  # 补充词已全部并入词表 md 文件（解析后共 3,686 个可匹配词形）
+    _EXTRA_VOCAB: Set[str] = set()  # 补充词已全部并入词表 md 文件（解析后共 4,124 个可匹配词形）
 
     def _build_lemma_set(self) -> Set[str]:
         """对词库中每个词运行 spaCy 获取 lemma，扩展为更大匹配集合。"""

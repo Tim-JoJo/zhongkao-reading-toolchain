@@ -2,6 +2,8 @@
 
 背景：本仓库历史上 2,795 / 3,510 / 3,585 / 3,686 四种说法并存过，对外文档与运行时行为互相打架。
 2026-09-10 起统一为实测口径：**3,686 个可匹配词形 = A–Z 正文 3,570 条词条 + 附录 86 条**。
+2026-10-19 注入 Oxford 3000（CEFR A1/A2/B1）补充 435 条、并修复 `(AmE xxx)` 美式拼写丢失后，
+口径更新为：**4,124 个可匹配词形 = A–Z 正文 4,005 条词条 + 附录 86 条**（含连字符词 18 条）。
 改词表就必然触发本文件，强制同步文档与 hook/conftest.py 的常量。
 """
 from __future__ import annotations
@@ -16,7 +18,7 @@ from conftest import (APPENDIX_FORMS, AZ_ENTRY_LINES, AZ_STAR_LINES, HYPHEN_FORM
 pytest.importorskip("spacy", reason="解析词表需要 spaCy（纯文档 hook 见 test_doc_consistency）")
 pytest.importorskip("en_core_web_sm", reason="需要 spaCy 模型 en_core_web_sm")
 
-NUMBERS = ("3686", "3570", "86", "505", "16")
+NUMBERS = ("4124", "4005", "86", "505", "18")
 
 
 def _checker():

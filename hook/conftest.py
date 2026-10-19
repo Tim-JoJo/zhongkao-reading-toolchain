@@ -22,11 +22,12 @@ DESIGN_LOGIC = GEN / "Part2-题目生成/rc-question-writing/references/design-l
 SHARED_THRESHOLDS = P1 / "thresholds.py"
 
 # ── 词表实测口径（改词表后必须同步这里 + 全仓文档）──
-PARSED_VOCAB_FORMS = 3686   # parse_vocab_md() 去重词形总数
-AZ_ENTRY_LINES = 3570       # A–Z 正文词条行数
+# 2026-10-19 注入 Oxford 3000（CEFR A1/A2/B1）补充 435 条后的实测值
+PARSED_VOCAB_FORMS = 4124   # parse_vocab_md() 去重词形总数
+AZ_ENTRY_LINES = 4005       # A–Z 正文词条行数（课标主体 3570 + Oxford 补充 435）
 AZ_STAR_LINES = 505         # 其中带 * 的二级（小学阶段）词汇行数
 APPENDIX_FORMS = 86         # 附录（基数词/序数词/月份/星期/地理名称）词形数
-HYPHEN_FORMS = 16           # 含连字符的词形数
+HYPHEN_FORMS = 18           # 含连字符的词形数
 
 # ── 有意差异登记表 ──
 # 规则：任何"文档与实现不一致但暂时不改"的差异都必须登记在此并写清理由，

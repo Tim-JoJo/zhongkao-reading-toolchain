@@ -548,8 +548,8 @@ rect.c-bg-rect { fill: var(--bg); }
           <text x="1069.6000000000001" y="132" class="t-muted" font-size="8" text-anchor="middle">状态机门禁 · 缺步拒导</text>
         </g>
 
-        <g id="node-vocab" data-node-id="vocab" data-node-label="课标词表" tabindex="0" role="button" aria-label="聚焦课标词表，3,686 可匹配词形, 知识库 · 追加工具 › Part 1 · 文章改写" aria-pressed="false" data-node-kind="database" data-node-sublabel="3,686 可匹配词形" data-node-context="知识库 · 追加工具 › Part 1 · 文章改写">
-          <title>课标词表 · 3,686 可匹配词形 · 知识库 · 追加工具 › Part 1 · 文章改写</title>
+        <g id="node-vocab" data-node-id="vocab" data-node-label="课标词表" tabindex="0" role="button" aria-label="聚焦课标词表，4,124 可匹配词形, 知识库 · 追加工具 › Part 1 · 文章改写" aria-pressed="false" data-node-kind="database" data-node-sublabel="4,124 可匹配词形" data-node-context="知识库 · 追加工具 › Part 1 · 文章改写">
+          <title>课标词表 · 4,124 可匹配词形 · 知识库 · 追加工具 › Part 1 · 文章改写</title>
           <rect x="416" y="220" width="128" height="52" rx="6" class="c-mask"/>
           <rect x="416" y="220" width="128" height="52" rx="6" class="c-database" stroke-width="1.5"/>
           <g aria-hidden="true" data-semantic-sigil="database" class="semantic-sigil s-database" transform="translate(422 226) scale(0.6875)">
@@ -557,7 +557,7 @@ rect.c-bg-rect { fill: var(--bg); }
             <path d="M3 4v8c0 1.1 2.2 2 5 2s5-.9 5-2V4M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>
           </g>
           <text data-node-label="" x="480" y="241" class="t-primary" font-size="11" font-weight="600" text-anchor="middle">课标词表</text>
-          <text x="480" y="258" class="t-muted" font-size="8" text-anchor="middle">3,686 可匹配词形</text>
+          <text x="480" y="258" class="t-muted" font-size="8" text-anchor="middle">4,124 可匹配词形</text>
         </g>
 
         <g id="node-rules" data-node-id="rules" data-node-label="题型与句式库" tabindex="0" role="button" aria-label="聚焦题型与句式库，真题题干模板, 知识库 · 追加工具 › Part 2 · 题目生成" aria-pressed="false" data-node-kind="database" data-node-sublabel="真题题干模板" data-node-context="知识库 · 追加工具 › Part 2 · 题目生成">

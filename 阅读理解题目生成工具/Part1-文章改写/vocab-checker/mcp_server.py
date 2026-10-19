@@ -18,7 +18,7 @@ except ModuleNotFoundError:                 # mcp >=2：同一能力改名为 MC
 # ── 初始化 MCP 服务器 ──
 mcp = FastMCP(
     "vocab-checker",
-    instructions="初中英语阅读命题生词检查器 — 基于2022版课标二级、三级词汇表（3,686 个可匹配词形），提供文本超纲词检测、覆盖率统计和年级合规校验。",
+    instructions="初中英语阅读命题生词检查器 — 基于2022版课标二级、三级词汇表 + Oxford 3000（A1–B1）补充（4,124 个可匹配词形），提供文本超纲词检测、覆盖率统计和年级合规校验。",
 )
 
 # ── 延迟加载 checker（避免启动超时） ──
@@ -43,7 +43,7 @@ def _get_checker():
 def check_text(text: str, proper_names: list[str] | None = None) -> dict[str, Any]:
     """检查英文文本中的超纲词汇和课标词覆盖率。
 
-    依据 2022 版义务教育英语课标二级、三级词汇表（3,686 个可匹配词形），
+    依据 2022 版义务教育英语课标二级、三级词汇表 + Oxford 3000（A1–B1）补充（4,124 个可匹配词形），
     利用 spaCy 词形还原 + 派生词缀匹配，输出：
       - 课标词覆盖率
       - 超纲词列表（去重 + 频次排序）
