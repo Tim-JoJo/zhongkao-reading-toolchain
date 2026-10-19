@@ -262,9 +262,13 @@ def run_check_passage(
         "lenient": round(vocab_result["coverage"], 4),
         "strict": round(vocab_result.get("coverage_strict", 0.0), 4),
         "relaxed_by_affix_or_stem": (vocab_result.get("relaxed_only_words") or [])[:20],
-        "note": ("lenient 走「原文/lemma → 派生词缀 → 激进词干」三层匹配（当前用于判定）；"
-                 "strict 只认原文与 lemma 直接命中。差额越大，说明越多词是靠词缀/词干放宽才判为课标词，"
-                 "覆盖率越偏乐观。两者差距明显时建议人工抽查 relaxed_by_affix_or_stem。"),
+        "compound_words": vocab_result.get("compound_words") or {},
+        "extra_known_hits": vocab_result.get("extra_known_hits") or [],
+        "note": ("lenient 走「原文/lemma → 派生词缀 → 激进词干 → 合成词拆分」四层匹配（当前用于判定）；"
+                 "strict 只认原文/lemma 直接命中与熟词白名单。差额越大，说明越多词是靠算法放宽才判为课标词，"
+                 "覆盖率越偏乐观。两者差距明显时建议人工抽查 relaxed_by_affix_or_stem；"
+                 "compound_words 是其中按合成词解释的词及拆法，extra_known_hits 是命中白名单的词。"
+                 "超纲词里若有学生明显认识的熟词，用 vocab-checker 的 mark_known 登记，不要为它加注释或改句。"),
     }
 
     return {

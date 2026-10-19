@@ -20,3 +20,10 @@ _*.txt
 
 # ZCode 保存的工作流与会话状态(含本机绝对路径,不入库)
 .zcode/
+
+# vocab-checker 本机运行产物(不入库): lemma 缓存按词表哈希自动重建; 超纲词命中统计是本机审稿数据
+# 注意: 同目录的熟词白名单 extra_known_words.txt 是人工确认结果, 需要入库
+.lemma_cache.pkl
+.lemma_cache.pkl.tmp
+unknown_word_stats.json
+unknown_word_stats.json.tmp

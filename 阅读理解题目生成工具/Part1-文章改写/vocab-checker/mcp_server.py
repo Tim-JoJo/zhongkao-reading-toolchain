@@ -1,9 +1,13 @@
 """
 初中英语阅读命题 — 生词检查 MCP Server
 ========================================
-提供两个 Tool：
-  1. check_text      — 检查英文文本超纲词
-  2. list_unknown    — 列出/导出超纲词详情
+提供六个 Tool：
+  1. check_text          — 检查英文文本超纲词
+  2. check_article       — 检查完整文章（标题 + 正文）
+  3. check_grade_level   — 按九年级标准校验
+  4. mark_known          — 把误判为超纲的熟词登记进白名单（持久化，立即生效）
+  5. unmark_known        — 从白名单移除
+  6. review_unknown_log  — 列出历史上最常被判超纲、且仍未处理的词，供人工确认
 """
 
 import sys
@@ -189,6 +193,58 @@ def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
             key=lambda x: -x[1],
         ),
     }
+
+
+# ═══════════════════════════════════════════════════
+# Tool 4–6: 反馈闭环 — 熟词白名单 + 超纲词命中统计
+# ═══════════════════════════════════════════════════
+
+@mcp.tool()
+def mark_known(words: list[str], note: str = "") -> dict[str, Any]:
+    """把被误判为超纲的熟词登记进白名单（写入 extra_known_words.txt，当前会话立即生效）。
+
+    适用：check_text / check_passage 把学生明显认识的词（如 wifi、kg、okay）列成了超纲词。
+    登记后该词不再计超纲、不再占中文注释配额；词表 md 本身与其口径不变。
+
+    Args:
+        words: 要登记的词，一行一个单词（可含连字符/撇号）。多词短语请改用 check_text 的 proper_names。
+        note:  可选备注（写进文件行尾注释，如 "口语高频" / "单位缩写"）
+
+    Returns:
+        dict: {added: [...], already_known: [...], invalid: [...], total_extra_known: n, file: 路径}
+    """
+    return _get_checker().mark_known(words, note=note)
+
+
+@mcp.tool()
+def unmark_known(words: list[str]) -> dict[str, Any]:
+    """从熟词白名单移除（文件中其余词与注释行原样保留）。
+
+    Args:
+        words: 要移除的词
+
+    Returns:
+        dict: {removed: [...], not_in_whitelist: [...], total_extra_known: n}
+    """
+    return _get_checker().unmark_known(words)
+
+
+@mcp.tool()
+def review_unknown_log(top_n: int = 20, min_count: int = 1) -> dict[str, Any]:
+    """列出历史上最常被判超纲、且按当前规则仍会被判超纲的词，供人工决定是否 mark_known。
+
+    每次 check_text / check_article / check_grade_level / check_passage 都会把超纲词累计记入
+    unknown_word_stats.json（同一次检查内重复出现只记 1 次）。反复上榜的词大概率是熟词。
+    已被白名单、合成词拆分或词表更新放行的词会自动从清单里消失。
+
+    Args:
+        top_n:     返回前 N 个
+        min_count: 至少被判超纲多少次才列出
+
+    Returns:
+        dict: {total_tracked: n, pending_review: n, top: [{word, count, last_seen, example}, ...], file: 路径}
+    """
+    return _get_checker().review_unknown_stats(top_n=top_n, min_count=min_count)
 
 
 # ═══════════════════════════════════════════════════

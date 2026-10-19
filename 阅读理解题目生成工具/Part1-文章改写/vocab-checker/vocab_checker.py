@@ -7,7 +7,13 @@
 功能：
   1. 解析二级、三级词汇表 md 文件，提取所有词形构建 Set 词库
   2. 利用 spaCy 对词库中的词做 lemmatization，建立 lemma→词库 的映射
+     （结果按词表内容哈希缓存到 .lemma_cache.pkl，词表不变则秒级加载）
   3. 提供 check() 函数：输入英文文本 → 输出超纲词列表 + 覆盖率
+  4. 合成词拆分：worldwide → world + wide 这类两部分都是词表词的合成词，
+     按课标「根据构词法猜测生词」口径视为可推断，不计超纲（命中列表见 compound_words）
+  5. 反馈闭环：
+       - extra_known_words.txt  熟词白名单（mark_known / unmark_known 维护），只并入匹配集合，不改词表口径
+       - unknown_word_stats.json 每次 check 把超纲词累计记录，review_unknown_stats() 列出被反复判为超纲的词供人工确认
 
 使用示例：
     >>> from vocab_checker import VocabChecker
@@ -15,11 +21,19 @@
     >>> result = checker.check("Hello, my name is Tom.")
     >>> print(result["unknown_words"])
     >>> print(f"覆盖率: {result['coverage']*100:.1f}%")
+    >>> checker.mark_known(["wifi", "kg"])          # 登记熟词（持久化）
+    >>> checker.review_unknown_stats(top_n=10)      # 看哪些词最常被判超纲
 """
 
+import hashlib
+import json
+import os
+import pickle
 import re
+import sys
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 import spacy
 
@@ -199,34 +213,61 @@ class VocabChecker:
     判定逻辑：
       一个 token 是"课标词" ⇔
         token.text.lower() ∈ vocab_set   OR
-        token.lemma_.lower() ∈ vocab_lemma_set
+        token.lemma_.lower() ∈ vocab_lemma_set   OR
+        词缀剥离 / 词干 / 合成词拆分 能还原到 vocab_lemma_set   OR
+        ∈ 熟词白名单 extra_known_words.txt
 
     专有名词（PROPN）特殊处理：不计入超纲词数，但单独列表供人工审核。
     """
+
+    # ── 落盘文件：白名单与统计放 feedback_dir（默认与词表同目录）；lemma 缓存固定跟词表放 ──
+    EXTRA_KNOWN_FILE = "extra_known_words.txt"
+    STATS_FILE = "unknown_word_stats.json"
+    CACHE_FILE = ".lemma_cache.pkl"
+    # 词干/词缀规则（_agg_stem、DERIVATIONAL_*）一变就要让旧缓存失效：改规则时把这个数字 +1
+    CACHE_VERSION = 1
 
     def __init__(
         self,
         vocab_md_path: str = "二级、三级词汇表（初中毕业要求）.md",
         spacy_model: str = "en_core_web_sm",
+        feedback_dir: Optional[str] = None,
+        record_stats: bool = True,
+        use_cache: bool = True,
     ):
         """初始化检查器。
 
         Args:
             vocab_md_path: 二级、三级词汇表 md 文件路径
             spacy_model: spaCy 模型名（需预先安装：python -m spacy download en_core_web_sm）
+            feedback_dir: 熟词白名单 / 超纲词统计 / lemma 缓存所在目录，默认与词表 md 同目录
+            record_stats: 每次 check() 是否把超纲词累计写入 unknown_word_stats.json（测试可关）
+            use_cache: 是否使用 .lemma_cache.pkl 跳过全表 lemma 构建
         """
         self.nlp = spacy.load(spacy_model)
+        self.spacy_model = spacy_model
+        self.vocab_md_path = Path(vocab_md_path)
+        self.feedback_dir = Path(feedback_dir) if feedback_dir else self.vocab_md_path.resolve().parent
+        self.record_stats = record_stats
+        self.use_cache = use_cache
+        self._loaded_from_cache = False
+
         self.base_vocab: Set[str] = parse_vocab_md(vocab_md_path)
         self.vocab_lemmas: Set[str] = self._build_lemma_set()
+        self._base_lemmas = frozenset(self.vocab_lemmas)  # 未并入白名单前的快照，unmark 时据此判断能不能删
+        # 白名单只并入匹配集合，不进 base_vocab：词表口径（hook 钉死的实测数字）不受反馈影响
+        self.extra_known: Set[str] = self._load_extra_known()
+        self.vocab_lemmas |= self.extra_known
 
         # 提示走 stderr：MCP stdio 传输的 stdout 只允许一行一个 JSON-RPC 对象，
         # 裸 print 会污染协议流（目前靠 FastMCP 捕获 stdout 兜着，不该依赖它）。
-        import sys as _sys
         print(
             f"[VocabChecker] 词库加载完毕: "
             f"原始词形 {len(self.base_vocab):,} 个, "
-            f"lemma 集合 {len(self.vocab_lemmas):,} 个",
-            file=_sys.stderr,
+            f"lemma 集合 {len(self.vocab_lemmas):,} 个"
+            f"（{'缓存' if self._loaded_from_cache else '全新构建'}），"
+            f"熟词白名单 {len(self.extra_known)} 个",
+            file=sys.stderr,
         )
 
     # ── 内部方法 ──
@@ -294,17 +335,34 @@ class VocabChecker:
     # ── 课标前缀（命题规则手册 1.3） ──
     DERIVATIONAL_PREFIXES = ["un", "re", "dis", "im", "in", "ir", "non"]
 
-    _EXTRA_VOCAB: Set[str] = set()  # 补充词已全部并入词表 md 文件（解析后共 4,124 个可匹配词形）
+    # 合成词拆分下限：两半各 ≥3 字母、全词 ≥7（于是必有一半 ≥4）。
+    # 实测 6 字母的 3+3 切分几乎全是巧合（pan+try、leg+end、car+pet），会把真生词放过去
+    MIN_COMPOUND_PART = 3
+    MIN_COMPOUND_TOTAL = 7
+    # 右半不能是这几个"本身是单词的派生后缀"：hostage ≠ host+age、justice ≠ just+ice、
+    # tenant ≠ ten+ant、rotate ≠ rot+ate。真正的合成词右半是 man/land/book/phone 一类实义词
+    _COMPOUND_RIGHT_STOP = frozenset({"age", "ice", "ate", "ant"})
 
     def _build_lemma_set(self) -> Set[str]:
-        """对词库中每个词运行 spaCy 获取 lemma，扩展为更大匹配集合。"""
+        """对词库中每个词运行 spaCy 获取 lemma，扩展为更大匹配集合。
+
+        结果只依赖词表内容 + 模型 + 规则版本，所以可以整体缓存；
+        熟词白名单在 __init__ 里另行并入，不进缓存（mark_known 不会让缓存失效）。
+        """
+        cached = self._load_cache()
+        if cached is not None:
+            self._stem_to_vocab = cached["stem_to_vocab"]
+            self._loaded_from_cache = True
+            return set(cached["vocab_lemmas"])
+
         lemmas: Set[str] = set()
         lemmas.update(self.base_vocab)  # 原始词形全部保留
-        lemmas.update(self._EXTRA_VOCAB)  # 手动补充词
 
-        # 批量处理以提高效率：所有词汇拼成一段文本
+        # 批量处理以提高效率：所有词汇拼成一段文本；只要 lemma，parser/ner 关掉省时间
         vocab_text = "\n".join(sorted(lemmas))
-        doc = self.nlp(vocab_text)
+        disable = [p for p in ("parser", "ner") if p in self.nlp.pipe_names]
+        with self.nlp.select_pipes(disable=disable):
+            doc = self.nlp(vocab_text)
         for token in doc:
             if not token.is_space:
                 lemmas.add(token.lemma_.lower())
@@ -319,7 +377,47 @@ class VocabChecker:
                 if stem not in self._stem_to_vocab or len(word) < len(self._stem_to_vocab[stem]):
                     self._stem_to_vocab[stem] = word
 
+        self._save_cache(lemmas)
         return lemmas
+
+    # ── lemma 缓存 ──
+
+    def _cache_key(self) -> str:
+        h = hashlib.sha1()
+        h.update(self.vocab_md_path.read_bytes())
+        h.update(f"|{self.spacy_model}|{spacy.__version__}|{self.nlp.meta.get('version', '')}"
+                 f"|{self.CACHE_VERSION}".encode())
+        return h.hexdigest()
+
+    def _cache_path(self) -> Path:
+        # 缓存是词表的派生物，跟词表放一起（feedback_dir 只放白名单与统计）
+        return self.vocab_md_path.resolve().parent / self.CACHE_FILE
+
+    def _load_cache(self) -> Optional[dict]:
+        if not self.use_cache:
+            return None
+        try:
+            with open(self._cache_path(), "rb") as f:
+                data = pickle.load(f)
+            if data.get("key") == self._cache_key():
+                return data
+        except (OSError, pickle.UnpicklingError, EOFError, AttributeError, KeyError):
+            pass
+        return None
+
+    def _save_cache(self, lemmas: Set[str]) -> None:
+        if not self.use_cache:
+            return
+        try:
+            self._cache_path().parent.mkdir(parents=True, exist_ok=True)
+            tmp = self._cache_path().with_suffix(".pkl.tmp")
+            with open(tmp, "wb") as f:
+                pickle.dump({"key": self._cache_key(),
+                             "vocab_lemmas": lemmas,
+                             "stem_to_vocab": self._stem_to_vocab}, f, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(tmp, self._cache_path())
+        except OSError as e:  # 只读目录等：缓存是加速手段，写不进去不影响功能
+            print(f"[VocabChecker] lemma 缓存写入失败（忽略）: {e}", file=sys.stderr)
 
     @staticmethod
     def _agg_stem(word: str) -> str:
@@ -380,7 +478,57 @@ class VocabChecker:
         if len(stem) >= 3 and stem in self._stem_to_vocab:
             return True
 
+        # ── 策略4：合成词拆分 ──
+        if self._compound_split(w) is not None:
+            return True
+
         return False
+
+    # ── 合成词拆分 ──
+
+    def _suffix_root_hit(self, part: str) -> bool:
+        """part 本身或剥掉一层后缀/复数后是否为词表词（只给合成词右半用）。"""
+        if part in self.vocab_lemmas:
+            return True
+        for suffix_re, append_str, _ in self.DERIVATIONAL_SUFFIXES:
+            root = re.sub(suffix_re, append_str, part)
+            if root != part and root in self.vocab_lemmas:
+                return True
+        for suf in ("s", "es"):  # headphones→headphone 经 lemma 多半已处理，这里兜底 -s/-es
+            if (part.endswith(suf) and len(part) - len(suf) >= self.MIN_COMPOUND_PART
+                    and part[:-len(suf)] in self.vocab_lemmas):
+                return True
+        return False
+
+    def _compound_split(self, word: str) -> Optional[Tuple[str, ...]]:
+        """把词拆成全部由词表词组成的两段，拆不出返回 None。
+
+        worldwide → (world, wide)   smartphone → (smart, phone)   skateboarder → (skate, boarder→board)
+        well-known → (well, known)  （spaCy 通常已把连字符词切开，这里兜 CLI 等未切分的调用方）
+
+        左半只认直接命中，右半允许一层后缀/复数剥离；两半各 ≥ MIN_COMPOUND_PART 字母、
+        全词 ≥ MIN_COMPOUND_TOTAL，否则 pan+try、leg+end 一类巧合切分会把真生词放过去。
+        放行的词连同拆法一起出现在 check() 的 compound_words 里，供人工复核。
+        """
+        w = word.lower()
+        if "-" in w:
+            parts = [p for p in w.split("-") if p]
+            if len(parts) >= 2 and all(self._suffix_root_hit(p) for p in parts):
+                return tuple(parts)
+            return None
+        if not w.isalpha():
+            return None
+        n = len(w)
+        lo = self.MIN_COMPOUND_PART
+        if n < max(2 * lo, self.MIN_COMPOUND_TOTAL):
+            return None
+        for i in range(lo, n - lo + 1):
+            left, right = w[:i], w[i:]
+            if right in self._COMPOUND_RIGHT_STOP or right.rstrip("s") in self._COMPOUND_RIGHT_STOP:
+                continue
+            if left in self.vocab_lemmas and self._suffix_root_hit(right):
+                return (left, right)
+        return None
 
     def _is_known_strict(self, token) -> Optional[bool]:
         """严格口径：只认「原文/lemma 直接命中」，不走派生词缀与激进词干。
@@ -438,6 +586,174 @@ class VocabChecker:
 
         return False
 
+    # ── 反馈闭环 ①：熟词白名单 ──
+
+    _WORD_RE = re.compile(r"^[a-z][a-z'\-]*[a-z]$")
+    _EXTRA_KNOWN_HEADER = (
+        "# 熟词白名单（vocab-checker 反馈闭环）\n"
+        "# 一行一个词（小写），# 之后是注释。由 mark_known / unmark_known 维护，也可手工编辑。\n"
+        "# 这里的词视为学生已掌握：不计超纲、不进中文注释配额；只并入匹配集合，不改动词表 md 的口径。\n"
+        "\n"
+    )
+
+    def _extra_known_path(self) -> Path:
+        return self.feedback_dir / self.EXTRA_KNOWN_FILE
+
+    def _stats_path(self) -> Path:
+        return self.feedback_dir / self.STATS_FILE
+
+    @staticmethod
+    def _normalize_word(word: str) -> str:
+        return str(word).strip().lower().strip("'\"-.,!?;:()[]{}")
+
+    def _load_extra_known(self) -> Set[str]:
+        path = self._extra_known_path()
+        if not path.exists():
+            return set()
+        words: Set[str] = set()
+        for line in path.read_text(encoding="utf-8").splitlines():
+            body = line.split("#", 1)[0].strip().lower()
+            if body:
+                words.add(body)
+        return words
+
+    def mark_known(self, words: Iterable[str], note: str = "") -> dict:
+        """把被误判为超纲的熟词登记进白名单（追加落盘，当前实例立即生效）。
+
+        只接受单个单词（可含连字符/撇号）；多词短语请走 check(proper_names=...) 或拆成单词分别登记。
+        已被词表/规则/白名单认识的词不重复写入，回报在 already_known。
+        """
+        if isinstance(words, str):
+            words = [words]
+        added: List[str] = []
+        already: List[str] = []
+        invalid: List[str] = []
+        for raw in words:
+            w = self._normalize_word(raw)
+            if not w or not self._WORD_RE.match(w):
+                invalid.append(str(raw))
+            elif w in self.vocab_lemmas or self._try_derivational_match(w):
+                already.append(w)
+            elif w not in added:
+                added.append(w)
+        if added:
+            path = self._extra_known_path()
+            self.feedback_dir.mkdir(parents=True, exist_ok=True)
+            is_new = not path.exists()
+            stamp = datetime.now().strftime("%Y-%m-%d")
+            with open(path, "a", encoding="utf-8") as f:
+                if is_new:
+                    f.write(self._EXTRA_KNOWN_HEADER)
+                for w in added:
+                    f.write(f"{w}  # {stamp}{' ' + note.strip() if note.strip() else ''}\n")
+            self.extra_known.update(added)
+            self.vocab_lemmas.update(added)
+        return {
+            "added": added,
+            "already_known": already,
+            "invalid": invalid,
+            "total_extra_known": len(self.extra_known),
+            "file": str(self._extra_known_path()),
+        }
+
+    def unmark_known(self, words: Iterable[str]) -> dict:
+        """从白名单移除（重写文件，注释行与其他词原样保留）。"""
+        if isinstance(words, str):
+            words = [words]
+        targets = {self._normalize_word(w) for w in words} - {""}
+        path = self._extra_known_path()
+        removed: Set[str] = set()
+        if targets and path.exists():
+            kept: List[str] = []
+            for line in path.read_text(encoding="utf-8").splitlines():
+                body = line.split("#", 1)[0].strip().lower()
+                if body and body in targets:
+                    removed.add(body)
+                else:
+                    kept.append(line)
+            if removed:
+                path.write_text("\n".join(kept).rstrip("\n") + "\n", encoding="utf-8")
+        self.extra_known.difference_update(removed)
+        # 手工编辑的白名单可能与词表重叠：词表本身的词不能因 unmark 掉出匹配集合
+        self.vocab_lemmas.difference_update(w for w in removed if w not in self._base_lemmas)
+        return {
+            "removed": sorted(removed),
+            "not_in_whitelist": sorted(targets - removed),
+            "total_extra_known": len(self.extra_known),
+        }
+
+    # ── 反馈闭环 ②：超纲词命中统计 ──
+
+    def _load_stats(self) -> Dict[str, dict]:
+        try:
+            with open(self._stats_path(), encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _save_stats(self, stats: Dict[str, dict]) -> None:
+        self.feedback_dir.mkdir(parents=True, exist_ok=True)
+        tmp = self._stats_path().with_suffix(".json.tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(stats, f, ensure_ascii=False, indent=1, sort_keys=True)
+        os.replace(tmp, self._stats_path())
+
+    def _record_unknown_stats(self, unknown_details: List[dict]) -> None:
+        """按「被判超纲的检查次数」累计：同一次 check 内一个词出现几次都只记 1。
+
+        以 lemma 为键（hostages/hostage 记成一条），这样 review 给出的就是可直接 mark_known 的原形。
+        """
+        if not unknown_details:
+            return
+        try:
+            stats = self._load_stats()
+            now = datetime.now().isoformat(timespec="seconds")
+            seen: Set[str] = set()
+            for d in unknown_details:
+                w = d.get("lemma") or d["word"]
+                if not w.isalpha():  # spaCy 对生词偶尔给出带符号的怪 lemma，这时退回表面形式
+                    w = d["word"]
+                if w in seen:
+                    continue
+                seen.add(w)
+                entry = stats.setdefault(w, {"count": 0, "first_seen": now, "example": ""})
+                entry["count"] = int(entry.get("count", 0)) + 1
+                entry["last_seen"] = now
+                if not entry.get("example"):
+                    entry["example"] = d.get("sentence", "")
+            self._save_stats(stats)
+        except OSError as e:  # 统计是辅助信息，写不进去不影响检查结果
+            print(f"[VocabChecker] 超纲词统计写入失败（忽略）: {e}", file=sys.stderr)
+
+    def review_unknown_stats(self, top_n: int = 20, min_count: int = 1) -> dict:
+        """列出历史上最常被判超纲、且现在仍会被判超纲的词，供人工决定是否 mark_known。
+
+        已被白名单 / 合成词拆分 / 规则更新放行的词自动剔除，所以这份清单只剩"还没处理的"。
+        """
+        stats = self._load_stats()
+        rows: List[dict] = []
+        for w, e in stats.items():
+            count = int(e.get("count", 0))
+            if count < min_count:
+                continue
+            if w in self.vocab_lemmas or self._try_derivational_match(w):
+                continue
+            rows.append({
+                "word": w,
+                "count": count,
+                "last_seen": e.get("last_seen", ""),
+                "example": e.get("example", ""),
+            })
+        rows.sort(key=lambda r: r["last_seen"], reverse=True)
+        rows.sort(key=lambda r: r["count"], reverse=True)  # 稳定排序：同频次按最近出现优先
+        return {
+            "total_tracked": len(stats),
+            "pending_review": len(rows),
+            "top": rows[:top_n],
+            "file": str(self._stats_path()),
+        }
+
     # ── 公共方法 ──
 
     def check(self, text: str, proper_names: Optional[list[str]] = None) -> dict:
@@ -461,6 +777,8 @@ class VocabChecker:
                     "unknown_words":      List[str],  # 超纲词列表（去重排序）
                     "unknown_details":    List[dict], # 超纲词详情（含位置、所在句）
                     "proper_noun_words":  List[str],  # 疑似专有名词列表（去重排序）
+                    "compound_words":     Dict[str, str],  # 宽松放行且可按合成词拆分的词 → 拆法
+                    "extra_known_hits":   List[str],  # 因熟词白名单而放行的词
                     "_doc":               spacy.Doc,  # spaCy 解析结果（供调用方复用，避免重复 NLP）
                 }
         """
@@ -492,6 +810,8 @@ class VocabChecker:
         proper_set: Set[str] = set()
         proper_count = 0
         token_occurrences = 0
+        relaxed_lemma: Dict[str, str] = {}  # 被宽松口径放行的词 → lemma，算合成词拆法时要用
+        extra_hits: Set[str] = set()
 
         for token in doc:
             # 跳过标点、空格、数字、货币符号、括号、引号
@@ -527,6 +847,11 @@ class VocabChecker:
                 known_count += 1
                 known_set.add(word)
                 token_occurrences += 1
+                lemma = token.lemma_.lower().strip("'\"-.,!?;:()[]{}")
+                if strict is False:
+                    relaxed_lemma[word] = lemma
+                if word in self.extra_known or lemma in self.extra_known:
+                    extra_hits.add(word)
             elif status is False:
                 unknown_set.add(word)
                 unknown_details.append({
@@ -547,6 +872,16 @@ class VocabChecker:
         strict_total = len(strict_known) + len(strict_unknown)
         coverage_strict = len(strict_known) / strict_total if strict_total > 0 else 1.0
 
+        # 宽松放行的词里能按合成词拆开的，单列拆法供人工复核（worldwide → world+wide）
+        compound_words: Dict[str, str] = {}
+        for w in sorted(strict_unknown - unknown_set):
+            split = self._compound_split(w) or self._compound_split(relaxed_lemma.get(w, ""))
+            if split:
+                compound_words[w] = "+".join(split)
+
+        if self.record_stats:
+            self._record_unknown_stats(unknown_details)
+
         return {
             "total_tokens": total,
             "token_occurrences": token_occurrences,  # 实际词元出现次数（篇幅用）
@@ -554,9 +889,11 @@ class VocabChecker:
             "unknown_tokens": len(unknown_set),
             "proper_nouns": proper_count,
             "coverage": round(coverage, 4),
-            # 严格口径（只认原文/lemma 直接命中）与"被词缀/词干放宽掉的词"
+            # 严格口径（只认原文/lemma 直接命中）与"被词缀/词干/合成词放宽掉的词"
             "coverage_strict": round(coverage_strict, 4),
             "relaxed_only_words": sorted(strict_unknown - unknown_set),
+            "compound_words": compound_words,        # 其中可按合成词拆分解释的 → 拆法
+            "extra_known_hits": sorted(extra_hits),  # 因熟词白名单而放行的词
             "unknown_words": sorted(unknown_set),
             "unknown_details": unknown_details,
             "proper_noun_words": sorted(proper_set),
@@ -610,6 +947,14 @@ class VocabChecker:
             print(f"\n  疑似专有名词 ({len(r['proper_noun_words'])} 个):")
             print(f"    {', '.join(r['proper_noun_words'])}")
             print(f"  (以上专有名词不计入超纲，请人工确认)")
+
+        if r.get("compound_words"):
+            print(f"\n  合成词拆分放行 ({len(r['compound_words'])} 个):")
+            print("    " + ", ".join(f"{w}={s}" for w, s in r["compound_words"].items()))
+
+        if r.get("extra_known_hits"):
+            print(f"\n  熟词白名单放行 ({len(r['extra_known_hits'])} 个):")
+            print(f"    {', '.join(r['extra_known_hits'])}")
 
         print(f"{bar}\n")
 

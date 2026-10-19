@@ -174,6 +174,8 @@ mcp__zhongkao-mcp__check_passage(text="正文", level="standard", grade=9, prope
 
 `proper_names` 支持**单单词专名**（`"Oxford"`）和**多词短语专名**（`"rage bait"`、`"brain rot"`、`"World Health Organization"`）；短语按整体匹配，命中后短语内的每个词都不计入超纲，也不计入覆盖率分母。年度词、机构名、书名等一律列入 `proper_names`，避免被误判为超纲词。
 
+**熟词被误判为超纲时**：超纲词列表里若出现学生明显认识的词（口语高频词、单位缩写、科技生活词，如 `okay`、`kg`、`wifi`），**不要**为它加中文注释或改写句子，而是用 `mcp__vocab-checker__mark_known(words=[...], note="...")` 登记进熟词白名单后重跑 `check_passage`；白名单持久化到 `vocab-checker/extra_known_words.txt`，之后的任务自动生效。可由构词法推断的合成词（`sunglasses`、`skateboard`）已自动放行，拆法见返回值 `coverage_range.compound_words`。拿不准的词先不登记，`mcp__vocab-checker__review_unknown_log` 会按历史被判超纲次数把反复出现的词排在前面，积累几篇后再批量确认。
+
 **原文原句检测 hook（硬性，导出前必须通过）**：调用 `mcp__zhongkao-mcp__check_original_quotes(text=正文, source_text=原文)` 复核改编正文。任何一句与原文原句归一化后完全一致、或字符相似度 ≥ 95%，即返回 `all_pass=false`——该句必须改写（换结构、换措辞）后重新检测。**改编正文不得逐字引用原文任何句子**；hook 未通过不得进入第 9 步导出。
 
 返回结果包括：
