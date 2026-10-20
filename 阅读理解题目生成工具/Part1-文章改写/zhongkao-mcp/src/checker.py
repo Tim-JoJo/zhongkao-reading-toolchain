@@ -265,10 +265,11 @@ def run_check_passage(
         "compound_words": vocab_result.get("compound_words") or {},
         "extra_known_hits": vocab_result.get("extra_known_hits") or [],
         "note": ("lenient 走「原文/lemma → 派生词缀 → 激进词干 → 合成词拆分」四层匹配（当前用于判定）；"
-                 "strict 只认原文/lemma 直接命中与熟词白名单。差额越大，说明越多词是靠算法放宽才判为课标词，"
-                 "覆盖率越偏乐观。两者差距明显时建议人工抽查 relaxed_by_affix_or_stem；"
-                 "compound_words 是其中按合成词解释的词及拆法，extra_known_hits 是命中白名单的词。"
-                 "超纲词里若有学生明显认识的熟词，用 vocab-checker 的 mark_known 登记，不要为它加注释或改句。"),
+                 "strict 只认原文/lemma 直接命中（含熟词白名单；所有格 's、缩略 n't 等附着语素和单字母不计）。"
+                 "差额越大，说明越多词是靠算法放宽才判为课标词，覆盖率越偏乐观。两者差距明显时建议人工抽查 "
+                 "relaxed_by_affix_or_stem（含合成词放行项）；compound_words 是其中按合成词解释的词及拆法，"
+                 "extra_known_hits 是命中白名单的词。超纲词里若有学生明显认识的熟词，用 vocab-checker 的 "
+                 "mark_known 登记后重跑本工具即生效（白名单按文件修改时间自动重载，无需重启），不要为它加注释或改句。"),
     }
 
     return {

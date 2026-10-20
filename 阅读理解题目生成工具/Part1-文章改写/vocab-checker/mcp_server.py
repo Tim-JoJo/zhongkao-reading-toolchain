@@ -48,10 +48,11 @@ def check_text(text: str, proper_names: list[str] | None = None) -> dict[str, An
     """检查英文文本中的超纲词汇和课标词覆盖率。
 
     依据 2022 版义务教育英语课标二级、三级词汇表 + Oxford 3000（A1–B1）补充（4,124 个可匹配词形），
-    利用 spaCy 词形还原 + 派生词缀匹配，输出：
-      - 课标词覆盖率
+    匹配四层：原文/lemma 直接命中 → 派生词缀 → 激进词干 → 合成词拆分（sunglasses=sun+glasses），
+    外加熟词白名单 extra_known_words.txt（mark_known 维护，各进程下次 check 自动重载）。输出：
+      - 课标词覆盖率（lenient；coverage_strict 只算直接命中与白名单，差额即算法放宽部分）
       - 超纲词列表（去重 + 频次排序）
-      - 疑似专有名词（不计入超纲）
+      - 疑似专有名词（不计入超纲：PROPN / NER 实体 / 句中大写；标题式大写行不推断，靠 proper_names 声明）
       - 每个超纲词的详细信息（lemma、位置、所在句子）
 
     Args:
@@ -63,11 +64,15 @@ def check_text(text: str, proper_names: list[str] | None = None) -> dict[str, An
 
     Returns:
         dict: {
-            "total_tokens": 有效词总数,
+            "total_tokens": 有效唯一词元数,
             "known_tokens": 课标词数,
             "unknown_tokens": 超纲词数,
             "proper_nouns": 疑似专有名词数（不计入超纲）,
-            "coverage": 覆盖率 (0~1),
+            "coverage": 覆盖率 (0~1，宽松口径),
+            "coverage_strict": 严格口径覆盖率,
+            "relaxed_only_words": [靠词缀/词干/合成词放宽才判为课标词的词],
+            "compound_words": {词: 拆法},        # 其中按合成词解释的
+            "extra_known_hits": [命中白名单的词],
             "unknown_words": [超纲词列表-去重排序],
             "word_frequency": [[词, 频次], ...],  # 按频次降序
             "proper_noun_words": [专有名词列表],
@@ -125,7 +130,7 @@ from thresholds import GRADE_LIMITS  # noqa: E402
 
 
 @mcp.tool()
-def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
+def check_grade_level(text: str, grade: int = 9, proper_names: list[str] | None = None) -> dict[str, Any]:
     """按九年级标准校验文本是否符合命题规范。
 
     本工具只面向九年级（覆盖率 95%-97%，超纲比例 3%-5%，平均句长 ≤26）。
@@ -133,6 +138,7 @@ def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
     Args:
         text: 待检查的英文文本
         grade: 年级 — 本工具只面向九年级，固定 9；传入其他值将返回错误
+        proper_names: 保留的专名实体列表（同 check_text），不传则只靠自动专名推断
 
     Returns:
         dict: 包含检查结果 + 逐项通过/未通过判定
@@ -141,7 +147,8 @@ def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
         return {"error": f"年级参数无效: {grade}。本工具只面向九年级，grade 必须为 9"}
 
     c = _get_checker()
-    result = c.check(text)
+    result = c.check(text, proper_names=proper_names)
+    from vocab_checker import unknown_word_frequency  # noqa: E402（_get_checker 之后才在 sys.path 上）
     limits = GRADE_LIMITS[grade]
     unknown_tokens = result["unknown_tokens"]
     proper_count = len(result.get("proper_noun_words", []))
@@ -187,11 +194,10 @@ def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
         "all_pass": all_pass,
         "checks": checks,
         "unknown_words": result["unknown_words"],
-        "word_frequency": sorted(
-            [(w, sum(1 for d in result["unknown_details"] if d["word"] == w))
-             for w in result["unknown_words"]],
-            key=lambda x: -x[1],
-        ),
+        "word_frequency": unknown_word_frequency(result["unknown_details"]),
+        "compound_words": result.get("compound_words", {}),
+        "extra_known_hits": result.get("extra_known_hits", []),
+        "proper_noun_words": result.get("proper_noun_words", []),
     }
 
 
@@ -201,7 +207,8 @@ def check_grade_level(text: str, grade: int = 9) -> dict[str, Any]:
 
 @mcp.tool()
 def mark_known(words: list[str], note: str = "") -> dict[str, Any]:
-    """把被误判为超纲的熟词登记进白名单（写入 extra_known_words.txt，当前会话立即生效）。
+    """把被误判为超纲的熟词登记进白名单（写入 extra_known_words.txt；本进程立即生效，
+    zhongkao-mcp 的 check_passage 在下次调用时按文件修改时间自动重载，无需重启）。
 
     适用：check_text / check_passage 把学生明显认识的词（如 wifi、kg、okay）列成了超纲词。
     登记后该词不再计超纲、不再占中文注释配额；词表 md 本身与其口径不变。
@@ -233,16 +240,17 @@ def unmark_known(words: list[str]) -> dict[str, Any]:
 def review_unknown_log(top_n: int = 20, min_count: int = 1) -> dict[str, Any]:
     """列出历史上最常被判超纲、且按当前规则仍会被判超纲的词，供人工决定是否 mark_known。
 
-    每次 check_text / check_article / check_grade_level / check_passage 都会把超纲词累计记入
-    unknown_word_stats.json（同一次检查内重复出现只记 1 次）。反复上榜的词大概率是熟词。
+    每次 check_text / check_article / check_grade_level / check_passage 都会把超纲词（按 lemma）累计记入
+    unknown_word_stats.json：count = 被判超纲的不同文本数（同一篇稿子反复检查只算 1 篇），
+    hits = 总次数。反复在不同稿子里上榜的词大概率是熟词。
     已被白名单、合成词拆分或词表更新放行的词会自动从清单里消失。
 
     Args:
-        top_n:     返回前 N 个
-        min_count: 至少被判超纲多少次才列出
+        top_n:     返回前 N 个（按 count、hits 降序，再按最近出现）
+        min_count: 至少在多少篇不同文本里被判超纲才列出
 
     Returns:
-        dict: {total_tracked: n, pending_review: n, top: [{word, count, last_seen, example}, ...], file: 路径}
+        dict: {total_tracked: n, pending_review: n, top: [{word, count, hits, last_seen, example}, ...], file: 路径}
     """
     return _get_checker().review_unknown_stats(top_n=top_n, min_count=min_count)
 

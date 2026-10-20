@@ -88,7 +88,7 @@ python 阅读理解题目追加工具.py --help
 |------|------|
 | `阅读理解题目追加工具.py` | 工具本体 |
 | `spec示例.json` | spec 格式参考（阅读单选示例） |
-| `spec模板.json` | 空白模板，直接填写即可 |
+| `spec模板.json` | 空白模板，含全部字段（`wordbank` 选词填空用、`options` 7选5 用、`answer_lines` 阅读问答用），按题型删掉用不到的即可 |
 | `requirements.txt` | 依赖清单（python-docx） |
 
 ## 七、常见问题

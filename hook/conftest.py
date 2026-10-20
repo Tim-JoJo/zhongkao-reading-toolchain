@@ -5,8 +5,14 @@
 """
 from __future__ import annotations
 
+import os
 import pathlib
 import sys
+
+# test_checker_contract 等会用真实词表跑 check_passage：关掉超纲词统计落盘，
+# 否则测试文本会写进真实的 vocab-checker/unknown_word_stats.json，污染人工审核队列（2026-10-20 实证过）。
+# 强制赋值而不是 setdefault：外部环境若导出了 =1（调试用），测试仍不得落盘
+os.environ["VOCAB_CHECKER_RECORD_STATS"] = "0"
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 GEN = REPO / "阅读理解题目生成工具"

@@ -24,6 +24,7 @@ pytest hook -q -k doc          # 只跑文档一致性（纯文本，0.1s）
 | `test_export_contract.py` | 文案改动让调用方静默失效 | 曾用 `startswith("文档已保存")` 判断成功再记工作流状态，改一个字就让门禁形同虚设；现在判定集中在 `exporter.is_export_ok`，并校验苹方-简字体与 eastAsia 中文字体；**首行缩进双写**也在锁内（v1.0.59 曾把缩进赋值行删掉、正文全顶格，当时只查字体没拦住） |
 | `test_checker_contract.py` | 指标口径漂移让硬门槛失效 | `word_count` 曾用 `token_occurrences`（专名不计入）：320 词含 40 个专名只报 280，高专名浓度的稿子能绕过「全文 ≤350 词」硬门槛（现按实词词元出现次数计，含专名）；grade_check 与 metrics 的句均曾是两套算法（现同源于 `_sentence_metrics`） |
 | `test_append_tool_contract.py` | XML 属性写了、渲染端不认 | 首行缩进只写绝对值 `w:firstLine`，WPS 等中文渲染器优先认字符制 → 用户端「没有首行缩进」（现 `firstLineChars`+`firstLine` 双写）；`w:shd` 被 `pPr.append()` 排到 `spacing` 之后违反 CT_PPr 次序，乱序 pPr 会被严格渲染器整段丢弃（现按 schema 顺序插入） |
+| `test_vocab_contract.py` | 词表口径漂移 / 生词判定启发式被静默改回 | 词表实测口径与文档、`conftest` 常量三方钉死；2026-10-20 起钉住生词判定的启发式与落盘行为：合成词拆分放行 `sunglasses/skateboard/headphones` 但拦住 `legend/hostage/massage` 巧合切分，右半剥后缀后的词根须 ≥3 字母（`affectation ≠ affect+ation→a`，系统词典扫描 864 例）；熟词白名单跨进程按文件修改时间重载（vocab-checker 与 zhongkao-mcp 是两个进程，曾经一边 `mark_known` 另一边要重启才认）、不改 `base_vocab` 数量、`note` 换行不得注入文件、手工条目规范化；统计以 lemma 为键、按不同文本数计、文件改坏不得让 `check()` 崩、`VOCAB_CHECKER_RECORD_STATS=0` 可关（测试曾把 `yuan` 写进真实统计）；坏缓存回退重建、缓存键跟随 `_agg_stem` 代码；国籍形容词（NORP）与句中大写人名归疑似专名、标题式大写行不推断、句首大写生词仍计超纲；`check_grade_level` 收 `proper_names` |
 
 ## 已知差异（有意保留，不是 bug）
 

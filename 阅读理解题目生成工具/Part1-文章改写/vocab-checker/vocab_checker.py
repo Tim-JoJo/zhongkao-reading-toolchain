@@ -224,7 +224,8 @@ class VocabChecker:
     EXTRA_KNOWN_FILE = "extra_known_words.txt"
     STATS_FILE = "unknown_word_stats.json"
     CACHE_FILE = ".lemma_cache.pkl"
-    # 词干/词缀规则（_agg_stem、DERIVATIONAL_*）一变就要让旧缓存失效：改规则时把这个数字 +1
+    # 词干规则 _agg_stem 的代码指纹已自动进缓存键（见 _cache_key），改规则不用再手动处理；
+    # 这个号只在缓存文件本身的结构变化时 +1
     CACHE_VERSION = 1
 
     def __init__(
@@ -232,7 +233,7 @@ class VocabChecker:
         vocab_md_path: str = "二级、三级词汇表（初中毕业要求）.md",
         spacy_model: str = "en_core_web_sm",
         feedback_dir: Optional[str] = None,
-        record_stats: bool = True,
+        record_stats: Optional[bool] = None,
         use_cache: bool = True,
     ):
         """初始化检查器。
@@ -240,23 +241,29 @@ class VocabChecker:
         Args:
             vocab_md_path: 二级、三级词汇表 md 文件路径
             spacy_model: spaCy 模型名（需预先安装：python -m spacy download en_core_web_sm）
-            feedback_dir: 熟词白名单 / 超纲词统计 / lemma 缓存所在目录，默认与词表 md 同目录
-            record_stats: 每次 check() 是否把超纲词累计写入 unknown_word_stats.json（测试可关）
+            feedback_dir: 熟词白名单与超纲词统计所在目录，默认与词表 md 同目录
+                          （lemma 缓存不在此，固定跟词表放，见 _cache_path）
+            record_stats: 每次 check() 是否把超纲词累计写入 unknown_word_stats.json。
+                          None 时读环境变量 VOCAB_CHECKER_RECORD_STATS（0/false/no/off 关闭，默认开）——
+                          测试与 CI 用它关掉，别把测试文本写进真实统计
             use_cache: 是否使用 .lemma_cache.pkl 跳过全表 lemma 构建
         """
         self.nlp = spacy.load(spacy_model)
         self.spacy_model = spacy_model
         self.vocab_md_path = Path(vocab_md_path)
         self.feedback_dir = Path(feedback_dir) if feedback_dir else self.vocab_md_path.resolve().parent
+        if record_stats is None:
+            flag = os.environ.get("VOCAB_CHECKER_RECORD_STATS", "1").strip().lower()
+            record_stats = flag not in ("0", "false", "no", "off")
         self.record_stats = record_stats
         self.use_cache = use_cache
         self._loaded_from_cache = False
 
         self.base_vocab: Set[str] = parse_vocab_md(vocab_md_path)
         self.vocab_lemmas: Set[str] = self._build_lemma_set()
-        self._base_lemmas = frozenset(self.vocab_lemmas)  # 未并入白名单前的快照，unmark 时据此判断能不能删
+        self._base_lemmas = frozenset(self.vocab_lemmas)  # 未并入白名单前的快照，重载白名单时以它为底
         # 白名单只并入匹配集合，不进 base_vocab：词表口径（hook 钉死的实测数字）不受反馈影响
-        self.extra_known: Set[str] = self._load_extra_known()
+        self._extra_known_sig, self.extra_known = self._read_extra_known_file()
         self.vocab_lemmas |= self.extra_known
 
         # 提示走 stderr：MCP stdio 传输的 stdout 只允许一行一个 JSON-RPC 对象，
@@ -387,6 +394,11 @@ class VocabChecker:
         h.update(self.vocab_md_path.read_bytes())
         h.update(f"|{self.spacy_model}|{spacy.__version__}|{self.nlp.meta.get('version', '')}"
                  f"|{self.CACHE_VERSION}".encode())
+        # 缓存里的 stem_to_vocab 由 _agg_stem 算出：把它的字节码和常量（后缀表就在常量里）一起哈希，
+        # 改了规则忘记动 CACHE_VERSION 也不会读到过时索引
+        code = self._agg_stem.__code__
+        h.update(code.co_code)
+        h.update(repr(code.co_consts).encode())
         return h.hexdigest()
 
     def _cache_path(self) -> Path:
@@ -396,28 +408,47 @@ class VocabChecker:
     def _load_cache(self) -> Optional[dict]:
         if not self.use_cache:
             return None
+        path = self._cache_path()
+        if not path.exists():
+            return None
         try:
-            with open(self._cache_path(), "rb") as f:
+            with open(path, "rb") as f:
                 data = pickle.load(f)
-            if data.get("key") == self._cache_key():
+            if (isinstance(data, dict) and data.get("key") == self._cache_key()
+                    and isinstance(data.get("vocab_lemmas"), set)
+                    and isinstance(data.get("stem_to_vocab"), dict)):
                 return data
-        except (OSError, pickle.UnpicklingError, EOFError, AttributeError, KeyError):
+            if isinstance(data, dict) and "key" in data and data.get("key") != self._cache_key():
+                return None  # 词表/模型/规则变了：正常过期，重建后会覆盖
+        except Exception:  # 截断、跨版本 pickle、被外部改坏……缓存只是加速手段，一律当作没有
             pass
+        try:  # 坏文件留着每次启动都要再撞一次，直接删；重建后 _save_cache 会写回当前格式
+            path.unlink()
+            print(f"[VocabChecker] lemma 缓存损坏，已删除并重建: {path.name}", file=sys.stderr)
+        except OSError as e:
+            print(f"[VocabChecker] lemma 缓存损坏且无法删除（忽略，每次启动都会重建）: {e}", file=sys.stderr)
         return None
 
     def _save_cache(self, lemmas: Set[str]) -> None:
         if not self.use_cache:
             return
+        path = self._cache_path()
+        tmp = path.parent / f"{path.name}.{os.getpid()}.tmp"  # 带 pid：两个进程同时建缓存不互相覆盖半成品
         try:
-            self._cache_path().parent.mkdir(parents=True, exist_ok=True)
-            tmp = self._cache_path().with_suffix(".pkl.tmp")
+            path.parent.mkdir(parents=True, exist_ok=True)
             with open(tmp, "wb") as f:
                 pickle.dump({"key": self._cache_key(),
                              "vocab_lemmas": lemmas,
                              "stem_to_vocab": self._stem_to_vocab}, f, protocol=pickle.HIGHEST_PROTOCOL)
-            os.replace(tmp, self._cache_path())
-        except OSError as e:  # 只读目录等：缓存是加速手段，写不进去不影响功能
+            os.replace(tmp, path)
+        except OSError as e:  # 只读目录等：写不进去不影响功能
             print(f"[VocabChecker] lemma 缓存写入失败（忽略）: {e}", file=sys.stderr)
+        finally:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
 
     @staticmethod
     def _agg_stem(word: str) -> str:
@@ -487,12 +518,16 @@ class VocabChecker:
     # ── 合成词拆分 ──
 
     def _suffix_root_hit(self, part: str) -> bool:
-        """part 本身或剥掉一层后缀/复数后是否为词表词（只给合成词右半用）。"""
+        """part 本身或剥掉一层后缀/复数后是否为词表词（只给合成词右半用）。
+
+        剥出的词根也要够 MIN_COMPOUND_PART 长：affectation 曾被拆成 affect + ation，ation 剥掉 tion
+        落到单字母的 a；系统词典里这类只靠 ≤2 字母词根放行的巧合有 864 个。
+        """
         if part in self.vocab_lemmas:
             return True
         for suffix_re, append_str, _ in self.DERIVATIONAL_SUFFIXES:
             root = re.sub(suffix_re, append_str, part)
-            if root != part and root in self.vocab_lemmas:
+            if root != part and len(root) >= self.MIN_COMPOUND_PART and root in self.vocab_lemmas:
                 return True
         for suf in ("s", "es"):  # headphones→headphone 经 lemma 多半已处理，这里兜底 -s/-es
             if (part.endswith(suf) and len(part) - len(suf) >= self.MIN_COMPOUND_PART
@@ -524,16 +559,57 @@ class VocabChecker:
             return None
         for i in range(lo, n - lo + 1):
             left, right = w[:i], w[i:]
-            if right in self._COMPOUND_RIGHT_STOP or right.rstrip("s") in self._COMPOUND_RIGHT_STOP:
+            right_sg = right[:-1] if right.endswith("s") else right
+            if right in self._COMPOUND_RIGHT_STOP or right_sg in self._COMPOUND_RIGHT_STOP:
                 continue
             if left in self.vocab_lemmas and self._suffix_root_hit(right):
                 return (left, right)
         return None
 
-    def _is_known_strict(self, token) -> Optional[bool]:
-        """严格口径：只认「原文/lemma 直接命中」，不走派生词缀与激进词干。
+    # ── 疑似专名判定（只对各层都不认识的词调用）──
 
-        存在的意义是把"覆盖率自证"这件事量化：宽松口径（_is_known）靠后缀/前缀/词干
+    PROPER_ENT_TYPES = frozenset({"PERSON", "NORP", "GPE", "LOC", "ORG", "FAC",
+                                  "EVENT", "WORK_OF_ART", "LANGUAGE", "PRODUCT"})
+
+    @staticmethod
+    def _in_title_case_line(token) -> bool:
+        """标题式大写行（Ancient Fossils Reveal Secrets）：大小写和 NER 在这种行上都不可信。
+
+        按**物理行**判断，不用 spaCy 的分句——标题行没有句号时 spaCy 会把它和下一句并成一句，连空行都隔不开。
+        判据：该行不以 .!? 收尾，≥4 字母的词至少 3 个且 ≥60% 首字母大写。
+        """
+        text = token.doc.text
+        start = text.rfind("\n", 0, token.idx) + 1
+        end = text.find("\n", token.idx)
+        line = text[start:(end if end != -1 else len(text))].strip().rstrip("\"')»”’ ")
+        if not line or line.endswith((".", "!", "?", "。")):
+            return False
+        words = re.findall(r"[A-Za-z]{4,}", line)
+        if len(words) < 3:
+            return False
+        caps = sum(1 for w in words if w[0].isupper())
+        return caps / len(words) >= 0.6
+
+    def _looks_like_proper_name(self, token) -> bool:
+        """决定一个各层都不认识的词进「疑似专名」桶（不计超纲、不计分母）还是算超纲。
+
+        三条路：NER 实体类型（Irish/Egyptian 是 ADJ+NORP、Ariely 是 ADV+PERSON，PROPN 通道抓不到）、
+        spaCy 的 PROPN、句中首字母大写（两样都没标出来的人名）。标题式大写行上三条都不可信，
+        一律不推断——标题里的名字靠 proper_names 声明。
+        """
+        if self._in_title_case_line(token):
+            return False
+        cap = token.text[:1].isupper()
+        if cap and token.ent_type_ in self.PROPER_ENT_TYPES:
+            return True
+        if token.pos_ == "PROPN":
+            return True
+        return cap and not token.is_sent_start
+
+    def _is_known_strict(self, token) -> Optional[bool]:
+        """严格口径：只认「原文/lemma 直接命中」（含白名单），不走派生词缀、激进词干与合成词拆分。
+
+        存在的意义是把"覆盖率自证"这件事量化：宽松口径（_is_known）靠后缀/前缀/词干/合成词
         匹配会把一批真超纲词判成课标词，覆盖率因此系统性偏高。两个口径的差额
         就是"被放宽掉的部分"，由调用方一并输出供人工判断。
         """
@@ -547,7 +623,7 @@ class VocabChecker:
         lemma = token.lemma_.lower().strip("'\"-.,!?;:()[]{}")
         if lemma and lemma in self.vocab_lemmas:
             return True
-        if token.pos_ == "PROPN":
+        if self._looks_like_proper_name(token):
             return None
         return False
 
@@ -579,16 +655,16 @@ class VocabChecker:
         if lemma != word and self._try_derivational_match(lemma):
             return True
 
-        # 专有名词推测：首字母大写的非句首词可能是人名/地名
-        # 不做硬判定，返回 None 供调用方人工审核
-        if token.pos_ == "PROPN":
+        # 各层都不认识：是疑似专名就返回 None 交人工审核，否则算超纲
+        if self._looks_like_proper_name(token):
             return None
 
         return False
 
     # ── 反馈闭环 ①：熟词白名单 ──
 
-    _WORD_RE = re.compile(r"^[a-z][a-z'\-]*[a-z]$")
+    # 单个词：字母/数字/连字符/撇号，至少 2 个字符且含字母（mp3、3d 这类也算词）
+    _WORD_RE = re.compile(r"^(?=.*[a-z])[a-z0-9][a-z0-9'\-]*[a-z0-9]$")
     _EXTRA_KNOWN_HEADER = (
         "# 熟词白名单（vocab-checker 反馈闭环）\n"
         "# 一行一个词（小写），# 之后是注释。由 mark_known / unmark_known 维护，也可手工编辑。\n"
@@ -606,23 +682,50 @@ class VocabChecker:
     def _normalize_word(word: str) -> str:
         return str(word).strip().lower().strip("'\"-.,!?;:()[]{}")
 
-    def _load_extra_known(self) -> Set[str]:
-        path = self._extra_known_path()
-        if not path.exists():
-            return set()
+    def _read_extra_known_file(self) -> Tuple[Optional[str], Set[str]]:
+        """一次读取白名单：返回 (内容哈希, 词集合)。
+
+        用内容哈希当签名，不依赖 mtime 精度，也没有"先 stat 再读"之间的竞争窗口。
+        手工编辑可能带引号/大写，统一走 _normalize_word，与 check() 剥标点的口径一致。
+        """
+        try:
+            raw = self._extra_known_path().read_bytes()
+        except OSError:
+            return None, set()
         words: Set[str] = set()
-        for line in path.read_text(encoding="utf-8").splitlines():
-            body = line.split("#", 1)[0].strip().lower()
-            if body:
-                words.add(body)
-        return words
+        for line in raw.decode("utf-8", errors="replace").splitlines():
+            w = self._normalize_word(line.split("#", 1)[0])
+            if w:
+                words.add(w)
+        return hashlib.sha1(raw).hexdigest(), words
+
+    def _load_extra_known(self) -> Set[str]:
+        return self._read_extra_known_file()[1]
+
+    def _extra_known_signature(self) -> Optional[str]:
+        return self._read_extra_known_file()[0]
+
+    def _refresh_extra_known(self) -> None:
+        """白名单文件被别的进程改过就重载。
+
+        vocab-checker（跑 mark_known）与 zhongkao-mcp（跑 check_passage）是两个独立进程，各有一个
+        VocabChecker 实例；不做这一步，一边登记的熟词另一边要重启才认，SKILL 里"登记后重跑即可"就是假的。
+        白名单很小，每次 check 多读一次文件可以忽略。
+        """
+        sig, words = self._read_extra_known_file()
+        if sig == self._extra_known_sig:
+            return
+        self.extra_known = words
+        self.vocab_lemmas = set(self._base_lemmas) | words
+        self._extra_known_sig = sig
 
     def mark_known(self, words: Iterable[str], note: str = "") -> dict:
-        """把被误判为超纲的熟词登记进白名单（追加落盘，当前实例立即生效）。
+        """把被误判为超纲的熟词登记进白名单（追加落盘，所有进程下次 check 即生效）。
 
-        只接受单个单词（可含连字符/撇号）；多词短语请走 check(proper_names=...) 或拆成单词分别登记。
+        只接受单个单词（可含连字符/撇号/数字）；多词短语请走 check(proper_names=...) 或拆成单词分别登记。
         已被词表/规则/白名单认识的词不重复写入，回报在 already_known。
         """
+        self._refresh_extra_known()
         if isinstance(words, str):
             words = [words]
         added: List[str] = []
@@ -641,13 +744,15 @@ class VocabChecker:
             self.feedback_dir.mkdir(parents=True, exist_ok=True)
             is_new = not path.exists()
             stamp = datetime.now().strftime("%Y-%m-%d")
+            clean_note = " ".join(str(note).split())  # note 是外部输入：换行会把整行注入"一行一词"文件
             with open(path, "a", encoding="utf-8") as f:
                 if is_new:
                     f.write(self._EXTRA_KNOWN_HEADER)
                 for w in added:
-                    f.write(f"{w}  # {stamp}{' ' + note.strip() if note.strip() else ''}\n")
-            self.extra_known.update(added)
-            self.vocab_lemmas.update(added)
+                    f.write(f"{w}  # {stamp}{' ' + clean_note if clean_note else ''}\n")
+            # 写完按文件重读：另一进程可能同时追加了别的词，以文件内容为准
+            self._extra_known_sig, self.extra_known = self._read_extra_known_file()
+            self.vocab_lemmas = set(self._base_lemmas) | self.extra_known
         return {
             "added": added,
             "already_known": already,
@@ -658,6 +763,7 @@ class VocabChecker:
 
     def unmark_known(self, words: Iterable[str]) -> dict:
         """从白名单移除（重写文件，注释行与其他词原样保留）。"""
+        self._refresh_extra_known()
         if isinstance(words, str):
             words = [words]
         targets = {self._normalize_word(w) for w in words} - {""}
@@ -666,16 +772,16 @@ class VocabChecker:
         if targets and path.exists():
             kept: List[str] = []
             for line in path.read_text(encoding="utf-8").splitlines():
-                body = line.split("#", 1)[0].strip().lower()
+                body = self._normalize_word(line.split("#", 1)[0])
                 if body and body in targets:
                     removed.add(body)
                 else:
                     kept.append(line)
             if removed:
                 path.write_text("\n".join(kept).rstrip("\n") + "\n", encoding="utf-8")
-        self.extra_known.difference_update(removed)
-        # 手工编辑的白名单可能与词表重叠：词表本身的词不能因 unmark 掉出匹配集合
-        self.vocab_lemmas.difference_update(w for w in removed if w not in self._base_lemmas)
+        # 以词表快照为底重建匹配集合：手工编辑的白名单可能与词表重叠，词表词不能因 unmark 掉出去
+        self._extra_known_sig, self.extra_known = self._read_extra_known_file()
+        self.vocab_lemmas = set(self._base_lemmas) | self.extra_known
         return {
             "removed": sorted(removed),
             "not_in_whitelist": sorted(targets - removed),
@@ -684,31 +790,51 @@ class VocabChecker:
 
     # ── 反馈闭环 ②：超纲词命中统计 ──
 
+    STATS_TEXTS_CAP = 50  # 每个词最多记多少个不同文本的指纹（count 上限也就是它）
+
     def _load_stats(self) -> Dict[str, dict]:
+        """读统计文件；非 dict 的条目直接丢掉——文件被手改坏不能连累 check()。"""
         try:
             with open(self._stats_path(), encoding="utf-8") as f:
                 data = json.load(f)
-            return data if isinstance(data, dict) else {}
         except (OSError, ValueError):
             return {}
+        if not isinstance(data, dict):
+            return {}
+        return {k: v for k, v in data.items() if isinstance(k, str) and isinstance(v, dict)}
 
     def _save_stats(self, stats: Dict[str, dict]) -> None:
         self.feedback_dir.mkdir(parents=True, exist_ok=True)
-        tmp = self._stats_path().with_suffix(".json.tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(stats, f, ensure_ascii=False, indent=1, sort_keys=True)
-        os.replace(tmp, self._stats_path())
+        path = self._stats_path()
+        tmp = path.parent / f"{path.name}.{os.getpid()}.tmp"  # 带 pid：两个进程同时写不互相覆盖半成品
+        try:
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(stats, f, ensure_ascii=False, indent=1, sort_keys=True)
+            os.replace(tmp, path)
+        finally:
+            if tmp.exists():
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
 
-    def _record_unknown_stats(self, unknown_details: List[dict]) -> None:
-        """按「被判超纲的检查次数」累计：同一次 check 内一个词出现几次都只记 1。
+    @staticmethod
+    def _text_fingerprint(text: str) -> str:
+        return hashlib.sha1(" ".join(text.split()).encode("utf-8")).hexdigest()[:16]
 
-        以 lemma 为键（hostages/hostage 记成一条），这样 review 给出的就是可直接 mark_known 的原形。
+    def _record_unknown_stats(self, unknown_details: List[dict], text: str) -> None:
+        """累计超纲词：count = 出现过的**不同文本**数，hits = 被判超纲的总次数。
+
+        同一篇稿子 check_text / check_grade_level / check_passage 各查一遍只算 1 篇；
+        改稿后文本变了仍会再算 1 篇（指纹按空白归一化后的全文）。
+        以 lemma 为键（hostages/hostage 记成一条），review 给出的就是可直接 mark_known 的原形。
         """
         if not unknown_details:
             return
         try:
             stats = self._load_stats()
             now = datetime.now().isoformat(timespec="seconds")
+            fp = self._text_fingerprint(text)
             seen: Set[str] = set()
             for d in unknown_details:
                 w = d.get("lemma") or d["word"]
@@ -717,24 +843,40 @@ class VocabChecker:
                 if w in seen:
                     continue
                 seen.add(w)
-                entry = stats.setdefault(w, {"count": 0, "first_seen": now, "example": ""})
-                entry["count"] = int(entry.get("count", 0)) + 1
+                entry = stats.setdefault(w, {"count": 0, "hits": 0, "texts": [], "first_seen": now, "example": ""})
+                if "texts" not in entry:  # 旧格式只有 count：历史累计转存为 legacy_count，换口径不能把它清零
+                    legacy = int(entry.get("count", 0) or 0)
+                    entry["legacy_count"] = legacy
+                    entry.setdefault("hits", legacy)
+                texts = entry.get("texts")
+                if not isinstance(texts, list):
+                    texts = []
+                if fp not in texts:
+                    texts.append(fp)
+                    del texts[:-self.STATS_TEXTS_CAP]
+                entry["texts"] = texts
+                entry["count"] = len(texts) + int(entry.get("legacy_count", 0) or 0)
+                entry["hits"] = int(entry.get("hits", 0) or 0) + 1
                 entry["last_seen"] = now
                 if not entry.get("example"):
                     entry["example"] = d.get("sentence", "")
             self._save_stats(stats)
-        except OSError as e:  # 统计是辅助信息，写不进去不影响检查结果
-            print(f"[VocabChecker] 超纲词统计写入失败（忽略）: {e}", file=sys.stderr)
+        except Exception as e:  # 统计是辅助信息：无论哪种故障都不能外溢到判定结果
+            print(f"[VocabChecker] 超纲词统计写入失败（忽略）: {e!r}", file=sys.stderr)
 
     def review_unknown_stats(self, top_n: int = 20, min_count: int = 1) -> dict:
         """列出历史上最常被判超纲、且现在仍会被判超纲的词，供人工决定是否 mark_known。
 
         已被白名单 / 合成词拆分 / 规则更新放行的词自动剔除，所以这份清单只剩"还没处理的"。
+        排序：不同文本数 count 降序 → 总次数 hits 降序 → 最近出现优先。
         """
+        self._refresh_extra_known()
+        top_n = max(0, int(top_n))
+        min_count = max(0, int(min_count))
         stats = self._load_stats()
         rows: List[dict] = []
         for w, e in stats.items():
-            count = int(e.get("count", 0))
+            count = int(e.get("count", 0) or 0)
             if count < min_count:
                 continue
             if w in self.vocab_lemmas or self._try_derivational_match(w):
@@ -742,11 +884,12 @@ class VocabChecker:
             rows.append({
                 "word": w,
                 "count": count,
-                "last_seen": e.get("last_seen", ""),
-                "example": e.get("example", ""),
+                "hits": int(e.get("hits", 0) or 0),
+                "last_seen": str(e.get("last_seen", "")),
+                "example": str(e.get("example", "")),
             })
         rows.sort(key=lambda r: r["last_seen"], reverse=True)
-        rows.sort(key=lambda r: r["count"], reverse=True)  # 稳定排序：同频次按最近出现优先
+        rows.sort(key=lambda r: (r["count"], r["hits"]), reverse=True)  # 稳定排序：同分按最近出现优先
         return {
             "total_tracked": len(stats),
             "pending_review": len(rows),
@@ -782,6 +925,7 @@ class VocabChecker:
                     "_doc":               spacy.Doc,  # spaCy 解析结果（供调用方复用，避免重复 NLP）
                 }
         """
+        self._refresh_extra_known()
         doc = self.nlp(text)
 
         # ── 构建用户声明专名的匹配集合（小写） ──
@@ -875,12 +1019,13 @@ class VocabChecker:
         # 宽松放行的词里能按合成词拆开的，单列拆法供人工复核（worldwide → world+wide）
         compound_words: Dict[str, str] = {}
         for w in sorted(strict_unknown - unknown_set):
-            split = self._compound_split(w) or self._compound_split(relaxed_lemma.get(w, ""))
+            lemma = relaxed_lemma.get(w, "")
+            split = self._compound_split(w) or (self._compound_split(lemma) if lemma else None)
             if split:
                 compound_words[w] = "+".join(split)
 
         if self.record_stats:
-            self._record_unknown_stats(unknown_details)
+            self._record_unknown_stats(unknown_details, text)
 
         return {
             "total_tokens": total,

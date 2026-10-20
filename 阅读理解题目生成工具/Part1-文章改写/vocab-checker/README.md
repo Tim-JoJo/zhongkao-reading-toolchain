@@ -72,10 +72,12 @@ python -m spacy download en_core_web_sm
 1. **直接命中**：原形或 spaCy lemma 在词表中（`runs → run`、`children → child`）
 2. **派生词缀还原**：剥离课标可考的前后缀后命中（`development → develop`、`unhappy → happy`）
 3. **词干匹配**：激进剥离多层后缀后与词表词同干（`cooperation ≈ cooperate`）
-4. **合成词拆分**：拆成两段都是词表词即视为可由构词法推断（课标三级"根据构词法猜测生词"）：`sunglasses → sun+glasses`、`skateboard → skate+board`、`headphones → head+phones`。为防巧合切分放过真生词，要求全词 ≥ 7 字母、两段各 ≥ 3 字母，且右段不能是 `age / ice / ate / ant` 这类本身是单词的派生后缀（`hostage ≠ host+age`）
-5. **熟词白名单**：`extra_known_words.txt` 里的词
+4. **合成词拆分**：拆成两段都是词表词即视为可由构词法推断（课标三级"根据构词法猜测生词"）：`sunglasses → sun+glasses`、`skateboard → skate+board`、`headphones → head+phones`。为防巧合切分放过真生词，要求全词 ≥ 7 字母、两段各 ≥ 3 字母，右段剥后缀后的词根也要 ≥ 3 字母（`affectation ≠ affect+ation→a`），且右段不能是 `age / ice / ate / ant` 这类本身是单词的派生后缀（`hostage ≠ host+age`）
+5. **熟词白名单**：`extra_known_words.txt` 里的词；文件一变，所有进程在下次检查时自动重载
 
 第 2–4 层统称"宽松放行"。返回值里 `coverage` 是宽松口径，`coverage_strict` 只算第 1、5 层，两者之差就是算法放宽的部分；`relaxed_only_words` 列出全部放宽词，`compound_words` 单列其中按合成词解释的词及拆法（如 `{"sunglasses": "sun+glasses"}`），`extra_known_hits` 列出命中白名单的词——三个字段都是给人复核用的。
+
+五层都不认识的词，再判断是不是**疑似专名**（不计超纲、不计分母，列在 `proper_noun_words` 供人工确认）：spaCy 标为 PROPN，或 NER 实体类型是人名/国籍/地名/机构等（国籍形容词 `Irish`、`Egyptian` 的词性是 ADJ，只有这条路能抓到），或句中（非句首）首字母大写（spaCy 认不出的人名）。**标题式大写行**（如 `Ancient Fossils Reveal Secrets`）上这三条都不可信，一律不推断——标题里的名字请用 `proper_names` 声明。
 
 ## 反馈闭环：让误判越来越少
 
@@ -89,19 +91,21 @@ python -m spacy download en_core_web_sm
 mark_known(words=["wifi", "kg"], note="单位/科技缩写")
 ```
 
-登记后立即生效：不再计超纲、不再占中文注释配额；新会话启动时自动加载。文件一行一个词、`#` 后是注释，可以手工编辑。白名单**只并入匹配集合，不改动词表 md**，所以词表口径（hook 钉死的实测数字）和"课标合规"这个指标的语义都不受影响。
+登记后立即生效：不再计超纲、不再占中文注释配额。其他进程（如 zhongkao-mcp 里跑 `check_passage` 的那个）在下次检查时按文件修改时间自动重载，**无需重启**。文件一行一个词、`#` 后是注释，可以手工编辑（带引号、大写都会被规范化）。白名单**只并入匹配集合，不改动词表 md**，所以词表口径（hook 钉死的实测数字）和"课标合规"这个指标的语义都不受影响。
 
 **② 超纲词命中统计** `unknown_word_stats.json`
 
-每次检查（含 Part1 `check_passage` 调用的同一份代码）都会把超纲词累计记录——同一次检查内重复出现只记 1 次。定期查看：
+每次检查（含 Part1 `check_passage` 调用的同一份代码）都会把超纲词累计记录，键是 lemma（`hostages`/`hostage` 记成一条）。每个词记两个数：`count` = 被判超纲的**不同文本数**（同一篇稿子用 `check_text`、`check_grade_level`、`check_passage` 各查一遍只算 1 篇），`hits` = 总次数。定期查看：
 
 ```
 review_unknown_log(top_n=20)
 ```
 
-返回按"被判超纲次数"排序的词及其出现例句；反复上榜的几乎必然是熟词，确认后一批 `mark_known` 即可。已被白名单、合成词拆分或词表更新放行的词会自动从清单里消失，所以这份清单只剩"还没处理的"。统计文件是本机审稿数据，不入库。
+返回按 `count`、`hits` 排序的词及其出现例句；反复在不同稿子里上榜的几乎必然是熟词，确认后一批 `mark_known` 即可。已被白名单、合成词拆分或词表更新放行的词会自动从清单里消失，所以这份清单只剩"还没处理的"。统计是辅助信息：文件被改坏也不会影响检查结果。统计文件是本机审稿数据，不入库。
 
-> 直接用 Python 时对应 `checker.mark_known(...)` / `checker.unmark_known(...)` / `checker.review_unknown_stats(...)`；`VocabChecker(..., feedback_dir=..., record_stats=False)` 可改白名单与统计的目录、或关闭统计记录（测试时用）。
+**测试与 CI 请关掉统计落盘**：设置环境变量 `VOCAB_CHECKER_RECORD_STATS=0`（仓库的 `hook/conftest.py` 和 `zhongkao-mcp/tests` 已经这么做），否则测试文本会混进你的审核队列。
+
+> 直接用 Python 时对应 `checker.mark_known(...)` / `checker.unmark_known(...)` / `checker.review_unknown_stats(...)`；`VocabChecker(..., feedback_dir=..., record_stats=False)` 可改白名单与统计的目录、或关闭统计记录（`record_stats` 不传时读上面的环境变量）。lemma 缓存 `.lemma_cache.pkl` 固定跟词表放，按词表内容、spaCy 模型版本和词干规则代码自动失效，坏文件会被自动删除重建。
 
 ## 年级标准
 

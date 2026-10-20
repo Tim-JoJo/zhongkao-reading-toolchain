@@ -1,7 +1,12 @@
 """测试 zhongkao-mcp 三个 Tool"""
 
+import os
 import sys
 from pathlib import Path
+
+# 测试文本不能写进真实的 vocab-checker/unknown_word_stats.json（pytest 与直接 python 运行两种方式都要生效；
+# 强制赋值而不是 setdefault，外部导出了 =1 也不落盘）
+os.environ["VOCAB_CHECKER_RECORD_STATS"] = "0"
 
 # 加入父目录到 sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
