@@ -26,6 +26,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: pip install pytest "spacy>=3.8"
+      # 全量运行：spaCy 跑词表/生词判定契约，python-docx 跑导出契约，mcp 跑 vocab-checker 工具层契约
+      - run: pip install pytest python-docx "spacy>=3.8" "mcp>=1.10"
       - run: python -m spacy download en_core_web_sm
       - run: pytest hook -q

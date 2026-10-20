@@ -283,6 +283,7 @@ def test_sentence_initial_capitalized_unknown_word_still_counts(fb):
 
 def test_check_grade_level_accepts_proper_names():
     """check_text 收 proper_names，check_grade_level 也必须收，否则同一篇稿两个工具口径不一。"""
+    pytest.importorskip("mcp", reason="工具层测试要导入 mcp_server.py，需要 mcp 包（FastMCP/MCPServer）")
     import importlib.util
     # 两个 server 的入口都叫 mcp_server.py，全套一起跑时 sys.modules["mcp_server"] 可能已是 zhongkao-mcp 的；
     # 按文件路径、独立模块名加载，不受加载顺序影响
