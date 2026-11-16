@@ -222,7 +222,7 @@ mcp__zhongkao-mcp__validate_questions(
 |--------|------|---------|
 | 选项格式 | 正确选项数量、连续字母、前缀格式（A. / B. / C. / D.） | 通过/不通过 |
 | 答案唯一性 | 答案在有效选项字母范围内 | 通过/不通过 |
-| 题型覆盖 | 每篇必须覆盖 vocabulary_or_detail / inference / main_idea，外加 writing_technique 或 detail（Q1 二选一）、ordering 或 inference（Q4 二选一）。**文章自带标题时例外**：Q5 已改出推断题，main_idea 不作硬性覆盖，校验时必须传 `article_has_title=true`（与第 3 步 `draw_blueprint` 同名参数同源） | 通过/不通过 |
+| 题型覆盖 | 每篇必须覆盖 vocabulary_or_detail / inference / main_idea，外加 writing_technique 或 detail（Q1 二选一）、ordering 或 inference（Q4 二选一）。**文章自带标题时例外**——见上方 `article_has_title` 说明 | 通过/不通过 |
 | 选项长度均衡 | 最长选项 ≤ 最短 × 2（词数）且 ≤ 30 字符差。validator 用双条件（超 2 倍 **且** 差 >30 字符）判定，排序题的序列选项（如 `②③①④`）长度天然接近，实际很少触发；若触发需按通用标准调整。序列选项只需保证所有选项同为完整序列（无缺标号/错序） | 通过/不通过 |
 | 正确项最长泄题 | 正确项字符数 ≥ 次长 × 1.2 且多出 ≥8 字符即判；一组 ≥3 题正确项为唯一最长选项也判（每题看着不明显、合起来就是「全选最长」的规律）——命中须扩写干扰项拉平，不是删短正确项 | 命中 → review_required |
 | 绝对词泄露 | `all / never / always / only / none / every / no one` 出现在干扰项中 | 标记预警 |
