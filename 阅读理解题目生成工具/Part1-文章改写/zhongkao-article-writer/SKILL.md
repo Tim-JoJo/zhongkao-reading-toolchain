@@ -31,7 +31,7 @@ description: Use when the user wants to turn an English news, magazine, science,
 
 **开始新任务时**，先用 `mcp__zhongkao-mcp__workflow_init(level="...")`（或 `workflow_reset`）清空上一个任务的记录，避免旧状态干扰本次交付（工作流状态写入 `.zhongkao_workflow.json`，供 Part2 的导出门禁使用）；可随时用 `mcp__zhongkao-mcp__workflow_status` 查看各硬性步骤完成情况。`check_passage` 会自动记录指标结果，无需手动登记。
 
-**外部引用缺失时的退化**：上述 `reading-explorer-writing` 的两个 reference（`module-library.md`、`mental-models-heuristics.md`）位于本工具包根目录的 `reading-explorer-writing/` 目录，若读取时发现路径不存在或不可读，**不要停止**，按以下规则降级：第 3 步退化为兜底模式（总分总 / 起承转合）完成篇章结构；第 5 步跳过外部模块骨架、直接按兜底结构撰写；第 6 步跳过 A1–A20 反模式清单，改用本包 `references/adaptation-methods.md` 的 Humanizer 清单；在报告"写作说明"一节注明"外部模块库不可用，已用兜底结构"。本 skill 包内 `references/` 下四个文件（`approved-standards.md`、`output-contract.md`、`adaptation-methods.md`、`curriculum-constraints.md`）是必需的，缺任一则先检查路径再继续。
+**外部引用缺失时的退化**：上述 `reading-explorer-writing` 的两个 reference（`module-library.md`、`mental-models-heuristics.md`）位于本工具包根目录的 `reading-explorer-writing/` 目录，若读取时发现路径不存在或不可读，**不要停止**，按「失败模式与 Fallback」#2 降级（第 3 步兜底结构 → 第 5 步按兜底撰写 → 第 6 步改用本包 Humanizer 清单，报告注明）。本 skill 包内 `references/` 下四个文件（`approved-standards.md`、`output-contract.md`、`adaptation-methods.md`、`curriculum-constraints.md`）是必需的，缺任一则先检查路径再继续。
 
 ## 输入
 
@@ -245,9 +245,7 @@ mcp__zhongkao-mcp__check_passage(text="正文", level="standard", grade=9, prope
 
 #### 导出报告 Word
 
-**输出目录（硬性步骤）：导出前必须确认输出路径。** 若用户会话中**未明确指定**报告 Word 的保存目录，**必须先询问用户**「报告 Word 保存到哪个目录？」，待用户给出路径后再导出；不得静默默认 `<用户下载目录>/文章报告/` 或任何默认目录。用户指定的路径优先。
-
-报告 Word 默认导出到 `<用户下载目录>/文章报告/`，目录不存在会自动创建（仅当用户未指定且确认采用默认时）。用 `run_export_report_docx`（python-docx）生成。
+**输出目录（硬性步骤）：导出前必须确认输出路径。** 若用户会话中**未明确指定**报告 Word 的保存目录，**必须先询问用户**「报告 Word 保存到哪个目录？」，待用户给出路径后再导出；不得静默默认任何目录。用户明确接受默认时导出到 `<用户下载目录>/文章报告/`（目录不存在会自动创建）；用户指定的路径优先。报告 Word 用 `run_export_report_docx`（python-docx）生成。
 
 文档内容：报告标题（20pt 加粗居中）+ 各章节（荧光标注图例、任务配置、事实提取清单与中心思想、带段内标注的文章全文、模块匹配、指标报告、段落词数、长难句清单、生词中文注释、写作说明、质量检查）。
 
