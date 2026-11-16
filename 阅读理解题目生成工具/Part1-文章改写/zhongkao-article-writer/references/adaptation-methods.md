@@ -174,7 +174,9 @@
 
 ## 6. Humanizer 受控清单
 
-> 来源：译编自 [blader/humanizer](https://github.com/blader/humanizer)（MIT License, © 2025 Siqi Chen），按中考英语改写场景增删。
+> 来源：译编自 [blader/humanizer](https://github.com/blader/humanizer)（MIT License, © 2025 Siqi Chen；2026-10 译编时上游为 v3.1.0），按中考英语改写场景增删。
+>
+> 上游 v4.0.0（2026-11-10）把「禁止补入事实」反转为「允许补入已知为真的细节」。本清单不跟进这一条：命题素材的事实边界以原文为准，任何新增都按「最终两问」删除或还原。
 
 ### 删除或改写
 
