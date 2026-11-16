@@ -38,7 +38,7 @@
 在**仓库根目录**（本目录的上一级）运行：
 
 ```bash
-./install.sh        # macOS / Linux；Windows 运行 install.bat
+./install.sh        # macOS / Linux；Windows 运行 install.bat；macOS 也可在 Finder 双击 install.command
 ```
 
 脚本建 `.venv`、装齐两个工具的依赖、下载 spaCy 模型，并在仓库根目录生成路径已填好的 `.mcp.json`——无需手改 `<工具根目录>`。

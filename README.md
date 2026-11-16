@@ -45,6 +45,8 @@ cd zhongkao-reading-toolchain
 ./install.sh        # macOS / Linux 一键安装；Windows 运行 install.bat
 ```
 
+macOS 也可以不敲命令：在 Finder 里直接双击 `install.command`（首次打开若被 Gatekeeper 拦截，右键 → 打开 → 再点「打开」）。
+
 脚本会建好 `.venv`、装齐两个工具的依赖、下载 spaCy 模型，并在仓库根目录生成路径已填好的 `.mcp.json`——不需要再手改任何绝对路径。之后二选一：
 
 - 直接在本仓库根目录开 agent 会话（Claude Code 自动读取根目录 `.mcp.json`）
@@ -140,7 +142,7 @@ pytest hook -q -k doc # 只跑文档一致性（纯文本，毫秒级）
 zhongkao-reading-toolchain/
 ├── README.md                          ← 本文件
 ├── LICENSE                            ← PolyForm Noncommercial 1.0.0（禁商用）
-├── install.sh / install.bat           ← 一键安装（venv + 依赖 + spaCy 模型 + 生成 .mcp.json）
+├── install.sh / install.command / install.bat ← 一键安装（venv + 依赖 + spaCy 模型 + 生成 .mcp.json；.command 供 macOS 双击）
 ├── scripts/gen_mcp_json.py            ← MCP 配置生成器（把模板占位符换成真实路径）
 ├── examples/                          ← 示例产物：三篇成品试卷 + 一份二卷追加样例
 ├── 阅读理解题目生成工具/               ← 主工具：文章改写 + 题目生成
