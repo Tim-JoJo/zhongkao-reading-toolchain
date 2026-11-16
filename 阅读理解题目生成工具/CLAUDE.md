@@ -57,7 +57,7 @@ Part2 生成题目并导出 Word 时，调用 `mcp__zhongkao-mcp__export_docx`�
 
 ## 6. MCP 配置位置（mcp-config-location）
 
-工具链 MCP server 配置在工具包根目录 `.mcp.json`（由工作区根加载）。部署时把 `.mcp.json` 中的 `<工具根目录>` 替换为本工具包的实际绝对路径，并按接收方机器的 python 环境修改 `command`。三个 server：
+工具链 MCP server 配置在工具包根目录 `.mcp.json`（由工作区根加载）。部署优先用仓库根目录 `install.sh` / `install.bat`：脚本会在仓库根目录生成路径与解释器均已填好的 `.mcp.json`，无需手改。手动部署时把 `.mcp.json` 中的 `<工具根目录>` 替换为本工具包的实际绝对路径，并按接收方机器的 python 环境修改 `command`。三个 server：
 
 - `vocab-checker` → `<工具根目录>/Part1-文章改写/vocab-checker/mcp_server.py`
 - `zhongkao-mcp` → `<工具根目录>/Part1-文章改写/zhongkao-mcp/mcp_server.py`

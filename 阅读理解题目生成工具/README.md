@@ -33,7 +33,18 @@
 
 ## 部署步骤（agent 按序执行）
 
-### 1. 安装依赖
+### 1. 一键安装（推荐）
+
+在**仓库根目录**（本目录的上一级）运行：
+
+```bash
+./install.sh        # macOS / Linux；Windows 运行 install.bat
+```
+
+脚本建 `.venv`、装齐两个工具的依赖、下载 spaCy 模型，并在仓库根目录生成路径已填好的 `.mcp.json`——无需手改 `<工具根目录>`。
+
+<details>
+<summary>手动安装（脚本不可用时的等价步骤）</summary>
 
 ```bash
 cd <工具根目录>
@@ -43,9 +54,13 @@ python -m spacy download en_core_web_sm     # 生词检查所需的词形还原�
 
 > 无 pip 权限时改用 `python -m pip install --user -r requirements.txt`。
 
+</details>
+
 ### 2. 配置 .mcp.json
 
-把包根目录 `.mcp.json` 复制到当前 Claude Code 项目的根目录，并把两处 `<工具根目录>` 替换为本工具包的实际绝对路径。路径分隔符正斜杠 `/` 与 Windows 双反斜杠 `\\` 均可（如 `C:\Users\me\阅读理解题目生成工具\Part1-文章改写\vocab-checker\mcp_server.py`）。
+一键安装的，把**仓库根目录**生成的 `.mcp.json` 复制到当前 Claude Code 项目的根目录即可（路径与解释器已按本机填好）；直接在仓库根目录开会话则无需复制。
+
+手动安装的，把包根目录 `.mcp.json` 模板复制过去，并将两处 `<工具根目录>` 替换为本工具包的实际绝对路径。路径分隔符正斜杠 `/` 与 Windows 双反斜杠 `\\` 均可（如 `C:\Users\me\阅读理解题目生成工具\Part1-文章改写\vocab-checker\mcp_server.py`）。
 
 配置成功后，会话里应出现这些工具：
 

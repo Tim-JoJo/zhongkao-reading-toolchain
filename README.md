@@ -39,15 +39,30 @@
 ## 快速开始
 
 ```bash
-# 1. 安装依赖
-pip install -r 阅读理解题目生成工具/requirements.txt
-python -m spacy download en_core_web_sm        # 生词核查所需词形还原模型
+git clone https://github.com/Tim-JoJo/zhongkao-reading-toolchain.git
+cd zhongkao-reading-toolchain
 
-# 2. 配置 MCP：把 .mcp.json 复制到你的 agent 项目根目录，
-#    将其中两处 <工具根目录> 替换为本工具包的绝对路径
-
-# 3. 重启 agent 会话，确认出现 mcp__zhongkao-mcp__* 与 mcp__vocab-checker__* 工具
+./install.sh        # macOS / Linux 一键安装；Windows 运行 install.bat
 ```
+
+脚本会建好 `.venv`、装齐两个工具的依赖、下载 spaCy 模型，并在仓库根目录生成路径已填好的 `.mcp.json`——不需要再手改任何绝对路径。之后二选一：
+
+- 直接在本仓库根目录开 agent 会话（Claude Code 自动读取根目录 `.mcp.json`）
+- 把生成的 `.mcp.json` 整个复制到你的 agent 项目根目录
+
+重启 agent 会话，确认出现 `mcp__zhongkao-mcp__*` 与 `mcp__vocab-checker__*` 工具。
+
+<details>
+<summary><b>手动安装（不跑脚本的等价步骤）</b></summary>
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r 阅读理解题目生成工具/requirements.txt -r 阅读理解题目追加工具/requirements.txt
+.venv/bin/python -m spacy download en_core_web_sm      # 生词核查所需词形还原模型
+.venv/bin/python scripts/gen_mcp_json.py --python "$PWD/.venv/bin/python" --output .mcp.json
+```
+
+</details>
 
 然后按各工具目录内 README 操作：
 
@@ -79,7 +94,7 @@ python -m spacy download en_core_web_sm        # 生词核查所需词形还原�
 
 ## 实测语料库
 
-这套工具链生成的全真模拟语料共 239 篇（编号 #11–#279；语料仓库暂不公开），每篇含改写短文 docx（带中文注释）、5 道四选一题和逐题解析。素材来自公有领域或开放授权来源（VOA Learning English / Simple English Wikipedia），逐篇原创改写。
+这套工具链生成的全真模拟语料共 239 篇（编号 #11–#279；语料仓库暂不公开），每篇含改写短文 docx（带中文注释）、5 道四选一题和逐题解析。素材来自公有领域或开放授权来源（VOA Learning English / Simple English Wikipedia），逐篇原创改写。其中三篇与一份二卷追加产物放在 [`examples/`](examples/)，可直接查看排版与解析效果。
 
 | 指标 | 全库实测（2026-09-16 按 239 篇 metrics 逐篇重算） |
 |---|---|
@@ -125,6 +140,9 @@ pytest hook -q -k doc # 只跑文档一致性（纯文本，毫秒级）
 zhongkao-reading-toolchain/
 ├── README.md                          ← 本文件
 ├── LICENSE                            ← PolyForm Noncommercial 1.0.0（禁商用）
+├── install.sh / install.bat           ← 一键安装（venv + 依赖 + spaCy 模型 + 生成 .mcp.json）
+├── scripts/gen_mcp_json.py            ← MCP 配置生成器（把模板占位符换成真实路径）
+├── examples/                          ← 示例产物：三篇成品试卷 + 一份二卷追加样例
 ├── 阅读理解题目生成工具/               ← 主工具：文章改写 + 题目生成
 │   ├── CLAUDE.md                      ← 操作硬性约定（开工前必读）
 │   ├── .mcp.json                      ← MCP 配置模板
@@ -137,7 +155,7 @@ zhongkao-reading-toolchain/
 <details>
 <summary><b>MCP 工具没有出现在会话里？</b></summary>
 
-检查 `.mcp.json` 中 `<工具根目录>` 是否已替换为真实绝对路径；路径正确后重启 agent 会话即可重新加载。
+重跑 `./install.sh`（Windows 为 `install.bat`）重新生成 `.mcp.json`，其中的解释器与绝对路径是按本机自动填写的；路径正确后重启 agent 会话即可重新加载。
 </details>
 
 <details>

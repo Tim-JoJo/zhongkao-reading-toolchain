@@ -1,0 +1,30 @@
+{
+ "all_pass": true,
+ "word_count": 293,
+ "average_sentence_length": 13.32,
+ "sentence_length_p90": 17,
+ "coverage": 0.9611,
+ "oov": [
+  "1800s",
+  "erosion",
+  "fences",
+  "fur",
+  "mud",
+  "wetland",
+  "wetlands"
+ ],
+ "relaxed": [
+  "absence",
+  "coastal",
+  "hunter",
+  "hunters",
+  "hunting",
+  "reviewer",
+  "watery"
+ ],
+ "id": 210,
+ "title": "Sea Otters: Small Hunters That Save the Shore",
+ "source_url": "https://learningenglish.voanews.com/a/sea-otters-help-save-california-s-wetlands-/7471802.html",
+ "source_site": "VOA",
+ "generated_at": "2026-09-12T15:37:54Z"
+}

@@ -27,3 +27,6 @@ _*.txt
 .lemma_cache.pkl.tmp
 unknown_word_stats.json
 unknown_word_stats.json.tmp
+
+# 一键安装生成的本机 MCP 配置(含绝对路径,不入库;模板在 阅读理解题目生成工具/.mcp.json)
+/.mcp.json

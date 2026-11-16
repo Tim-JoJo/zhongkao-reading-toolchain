@@ -1,0 +1,26 @@
+{
+ "all_pass": true,
+ "word_count": 318,
+ "average_sentence_length": 13.83,
+ "sentence_length_p90": 20,
+ "coverage": 0.9611,
+ "oov": [
+  "buzzing",
+  "fabric",
+  "patent",
+  "permanently",
+  "slider",
+  "tobacco",
+  "zip"
+ ],
+ "relaxed": [
+  "fastened",
+  "inventors",
+  "weakness"
+ ],
+ "id": 275,
+ "title": "The Long Road of the Little Zipper",
+ "source_url": "https://simple.wikipedia.org/wiki/Zipper",
+ "source_site": "Wikipedia",
+ "generated_at": "2026-09-12T23:00:15Z"
+}
